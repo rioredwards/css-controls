@@ -84,6 +84,8 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         await vscode.commands.executeCommand("editor.emmet.action.incrementNumberByOne");
+        // save the file so that the changes are reflected in the file (don't format to minimize intrusion)
+        await vscode.commands.executeCommand("workbench.action.files.saveWithoutFormatting");
       }
     ),
     vscode.commands.registerCommand(
@@ -108,6 +110,8 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         await vscode.commands.executeCommand("editor.emmet.action.decrementNumberByOne");
+        // save the file so that the changes are reflected in the file (don't format to minimize intrusion)
+        await vscode.commands.executeCommand("workbench.action.files.saveWithoutFormatting");
       }
     )
   );
