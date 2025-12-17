@@ -1,6 +1,11 @@
 import * as vscode from "vscode";
 
+// Regex for CSS numbers (e.g., 12px, 1.5rem, 50%)
 const CSS_NUMBER_REGEX = /-?\d*\.?\d+(px|rem|em|vh|vw|%|ch|fr)?/g;
+
+// Regex for Tailwind utility classes with numbers (e.g., w-12, h-64, p-4, gap-4)
+// Matches word boundary, letters/dashes, dash, then captures the number
+const TAILWIND_NUMBER_REGEX = /\b([a-z]+(?:-[a-z]+)*)-(\d+)/g;
 
 type Step = "tenth" | "one" | "ten";
 let currentStep: Step = "one";
@@ -8,11 +13,14 @@ let currentStep: Step = "one";
 export function activate(context: vscode.ExtensionContext): void {
   console.log("CSS Controls extension activated");
 
-  // CodeLens provider for CSS-like languages
+  // CodeLens provider for CSS-like languages and HTML/JSX with Tailwind
   const selector: vscode.DocumentSelector = [
     { language: "css", scheme: "file" },
     { language: "scss", scheme: "file" },
     { language: "less", scheme: "file" },
+    { language: "html", scheme: "file" },
+    { language: "javascriptreact", scheme: "file" },
+    { language: "typescriptreact", scheme: "file" },
   ];
 
   let activeEditor = vscode.window.activeTextEditor;
@@ -33,7 +41,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const document = activeEditor.document;
     const languageId = document.languageId;
-    if (languageId !== "css" && languageId !== "scss" && languageId !== "less") {
+    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+    const isHtmlOrJsx =
+      languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+
+    if (!isCssLike && !isHtmlOrJsx) {
       return false;
     }
 
@@ -46,8 +58,20 @@ export function activate(context: vscode.ExtensionContext): void {
     }
 
     const text = document.lineAt(activeLine).text;
-    CSS_NUMBER_REGEX.lastIndex = 0;
-    return CSS_NUMBER_REGEX.test(text);
+
+    // For CSS files, check for CSS numbers
+    if (isCssLike) {
+      CSS_NUMBER_REGEX.lastIndex = 0;
+      return CSS_NUMBER_REGEX.test(text);
+    }
+
+    // For HTML/JSX files, check for Tailwind classes with numbers
+    if (isHtmlOrJsx) {
+      TAILWIND_NUMBER_REGEX.lastIndex = 0;
+      return TAILWIND_NUMBER_REGEX.test(text);
+    }
+
+    return false;
   };
 
   context.subscriptions.push(
@@ -236,19 +260,89 @@ async function runNumberAdjustment(
   }
 
   const document = editor.document;
-  const cursorPos = editor.selection.active;
+  const languageId = document.languageId;
+  const isHtmlOrJsx =
+    languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
 
+  const cursorPos = editor.selection.active;
   const targetLine = typeof lineFromLens === "number" ? lineFromLens : cursorPos.line;
   const referenceColumn = cursorPos.line === targetLine ? cursorPos.character : undefined;
 
   const targetRange = findClosestNumberRangeOnLine(document, targetLine, referenceColumn);
 
-  if (targetRange) {
-    editor.selection = new vscode.Selection(targetRange.start, targetRange.start);
-    editor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+  if (!targetRange) {
+    return;
   }
 
-  await vscode.commands.executeCommand(emmetCommand);
+  editor.selection = new vscode.Selection(targetRange.start, targetRange.start);
+  editor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+
+  // For Tailwind classes, we need custom logic since Emmet doesn't work on class names
+  if (isHtmlOrJsx) {
+    const lineText = document.lineAt(targetLine).text;
+    const numberText = document.getText(targetRange);
+    const number = parseFloat(numberText);
+
+    if (isNaN(number)) {
+      return;
+    }
+
+    // Determine the step amount based on currentStep
+    const stepAmount = currentStep === "tenth" ? 0.1 : currentStep === "one" ? 1 : 10;
+
+    // Determine if incrementing or decrementing
+    const isIncrement = emmetCommand.includes("increment");
+
+    // Calculate new number
+    const newNumber = isIncrement ? number + stepAmount : number - stepAmount;
+
+    // For Tailwind, we typically want integers, but handle decimals for step 0.1
+    const newNumberText =
+      stepAmount === 0.1
+        ? newNumber.toFixed(1).replace(/\.0$/, "")
+        : Math.round(newNumber).toString();
+
+    // Find the full class name to replace (e.g., "w-12" -> "w-13")
+    TAILWIND_NUMBER_REGEX.lastIndex = 0;
+    let classMatch: RegExpExecArray | null;
+    let classRange: vscode.Range | null = null;
+
+    while ((classMatch = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
+      // match[2] is the number part
+      const numberStart = classMatch.index + classMatch[0].indexOf(classMatch[2]);
+      const numberEnd = numberStart + classMatch[2].length;
+
+      if (numberStart === targetRange.start.character && numberEnd === targetRange.end.character) {
+        // Found the matching class, now get the full class name range
+        const classStart = classMatch.index;
+        const classEnd = classMatch.index + classMatch[0].length;
+        classRange = new vscode.Range(
+          new vscode.Position(targetLine, classStart),
+          new vscode.Position(targetLine, classEnd)
+        );
+        break;
+      }
+    }
+
+    if (classRange) {
+      const fullClass = document.getText(classRange).trim();
+      // Replace the number in the class name
+      const newClass = fullClass.replace(numberText, newNumberText);
+
+      await editor.edit((editBuilder) => {
+        editBuilder.replace(classRange!, newClass);
+      });
+    } else {
+      // Fallback: just replace the number
+      await editor.edit((editBuilder) => {
+        editBuilder.replace(targetRange, newNumberText);
+      });
+    }
+  } else {
+    // For CSS files, use Emmet commands
+    await vscode.commands.executeCommand(emmetCommand);
+  }
+
   // Save the file so that the changes are reflected in the file (don't format to minimize intrusion)
   await vscode.commands.executeCommand("workbench.action.files.saveWithoutFormatting");
 }
@@ -263,20 +357,44 @@ function findClosestNumberRangeOnLine(
   }
 
   const lineText = document.lineAt(lineNumber).text;
+  const languageId = document.languageId;
+  const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+  const isHtmlOrJsx =
+    languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+
   let match: RegExpExecArray | null;
   const ranges: vscode.Range[] = [];
 
-  CSS_NUMBER_REGEX.lastIndex = 0;
-  while ((match = CSS_NUMBER_REGEX.exec(lineText)) !== null) {
-    const startCol = match.index;
-    const endCol = match.index + match[0].length;
+  if (isCssLike) {
+    // Find CSS numbers
+    CSS_NUMBER_REGEX.lastIndex = 0;
+    while ((match = CSS_NUMBER_REGEX.exec(lineText)) !== null) {
+      const startCol = match.index;
+      const endCol = match.index + match[0].length;
 
-    ranges.push(
-      new vscode.Range(
-        new vscode.Position(lineNumber, startCol),
-        new vscode.Position(lineNumber, endCol)
-      )
-    );
+      ranges.push(
+        new vscode.Range(
+          new vscode.Position(lineNumber, startCol),
+          new vscode.Position(lineNumber, endCol)
+        )
+      );
+    }
+  } else if (isHtmlOrJsx) {
+    // Find Tailwind classes with numbers
+    // Match patterns like w-12, h-64, p-4, etc. and extract just the number part
+    TAILWIND_NUMBER_REGEX.lastIndex = 0;
+    while ((match = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
+      // match[0] is the full match (e.g., "w-12"), match[1] is the prefix (e.g., "w"), match[2] is the number (e.g., "12")
+      const numberStart = match.index + match[0].indexOf(match[2]);
+      const numberEnd = numberStart + match[2].length;
+
+      ranges.push(
+        new vscode.Range(
+          new vscode.Position(lineNumber, numberStart),
+          new vscode.Position(lineNumber, numberEnd)
+        )
+      );
+    }
   }
 
   if (ranges.length === 0) {
