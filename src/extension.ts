@@ -136,13 +136,25 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "css-controls.incrementNumber",
       async (lineFromLens?: number) => {
-        await runNumberAdjustment(lineFromLens, "editor.emmet.action.incrementNumberByOne");
+        const emmetCommand =
+          currentStep === "tenth"
+            ? "editor.emmet.action.incrementNumberByOneTenth"
+            : currentStep === "one"
+            ? "editor.emmet.action.incrementNumberByOne"
+            : "editor.emmet.action.incrementNumberByTen";
+        await runNumberAdjustment(lineFromLens, emmetCommand);
       }
     ),
     vscode.commands.registerCommand(
       "css-controls.decrementNumber",
       async (lineFromLens?: number) => {
-        await runNumberAdjustment(lineFromLens, "editor.emmet.action.decrementNumberByOne");
+        const emmetCommand =
+          currentStep === "tenth"
+            ? "editor.emmet.action.decrementNumberByOneTenth"
+            : currentStep === "one"
+            ? "editor.emmet.action.decrementNumberByOne"
+            : "editor.emmet.action.decrementNumberByTen";
+        await runNumberAdjustment(lineFromLens, emmetCommand);
       }
     ),
     vscode.commands.registerCommand(
