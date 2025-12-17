@@ -30,9 +30,53 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const CONTEXT_KEY = "css-controls.hasActiveNumber";
 
+  // Create decoration type for highlighting the active number
+  const activeNumberDecorationType = vscode.window.createTextEditorDecorationType({
+    backgroundColor: new vscode.ThemeColor("editor.selectionBackground"),
+    borderColor: new vscode.ThemeColor("editor.selectionBackground"),
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderRadius: "2px",
+  });
+
   const updateContext = () => {
     const hasActiveNumber = checkIfCodeLensShouldShow();
     vscode.commands.executeCommand("setContext", CONTEXT_KEY, hasActiveNumber);
+    updateActiveNumberDecoration();
+  };
+
+  const updateActiveNumberDecoration = () => {
+    if (!activeEditor) {
+      return;
+    }
+
+    const document = activeEditor.document;
+    const languageId = document.languageId;
+    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+    const isHtmlOrJsx =
+      languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+
+    if (!isCssLike && !isHtmlOrJsx) {
+      activeEditor.setDecorations(activeNumberDecorationType, []);
+      return;
+    }
+
+    const cursorPos = activeEditor.selection.active;
+    const cursorLine = cursorPos.line;
+
+    if (cursorLine < 0 || cursorLine >= document.lineCount) {
+      activeEditor.setDecorations(activeNumberDecorationType, []);
+      return;
+    }
+
+    // Always use the current cursor position, not activeLine which might be stale
+    const targetRange = findClosestNumberRangeOnLine(document, cursorLine, cursorPos.character);
+
+    if (targetRange) {
+      activeEditor.setDecorations(activeNumberDecorationType, [targetRange]);
+    } else {
+      activeEditor.setDecorations(activeNumberDecorationType, []);
+    }
   };
 
   const checkIfCodeLensShouldShow = (): boolean => {
@@ -99,6 +143,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Initialize context on activation
   updateContext();
+
+  // Clean up decoration on deactivation
+  context.subscriptions.push(activeNumberDecorationType);
 
   const updateStepAndNotify = (newStep: Step) => {
     currentStep = newStep;
@@ -312,7 +359,8 @@ async function runNumberAdjustment(
 
     while ((classMatch = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
       // match[1] is prefix, match[2] is number, match[3] is optional suffix (like 'xl')
-      const numberStart = classMatch.index + classMatch[0].indexOf(classMatch[2]);
+      // Number starts after: classMatch.index (start of match) + prefix length + 1 (for the dash)
+      const numberStart = classMatch.index + classMatch[1].length + 1;
       const numberEnd = numberStart + classMatch[2].length;
 
       if (numberStart === targetRange.start.character && numberEnd === targetRange.end.character) {
@@ -389,7 +437,8 @@ function findClosestNumberRangeOnLine(
     TAILWIND_NUMBER_REGEX.lastIndex = 0;
     while ((match = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
       // match[1] is prefix, match[2] is number, match[3] is optional suffix
-      const numberStart = match.index + match[0].indexOf(match[2]);
+      // Number starts after: match.index (start of match) + prefix length + 1 (for the dash)
+      const numberStart = match.index + match[1].length + 1;
       const numberEnd = numberStart + match[2].length;
 
       ranges.push(
@@ -407,6 +456,14 @@ function findClosestNumberRangeOnLine(
 
   const refCol = referenceColumn ?? 0;
 
+  // First, check if cursor is inside any number range (prefer that)
+  for (const range of ranges) {
+    if (refCol >= range.start.character && refCol <= range.end.character) {
+      return range;
+    }
+  }
+
+  // Otherwise, find the closest by center distance
   let best = ranges[0];
   let bestDist = Math.abs((best.start.character + best.end.character) / 2 - refCol);
 
