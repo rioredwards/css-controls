@@ -33,14 +33,28 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  const updateStepAndNotify = (newStep: Step) => {
+    currentStep = newStep;
+    const label = currentStep === "tenth" ? "±0.1" : currentStep === "one" ? "±1" : "±10";
+    vscode.window.setStatusBarMessage(`CSS Controls: step ${label}`, 2000);
+    onDidChangeCodeLensesEmitter.fire();
+  };
+
   context.subscriptions.push(
     vscode.commands.registerCommand("css-controls.cycleStep", () => {
-      currentStep = currentStep === "tenth" ? "one" : currentStep === "one" ? "ten" : "tenth";
-
-      const label = currentStep === "tenth" ? "±0.1" : currentStep === "one" ? "±1" : "±10";
-      vscode.window.setStatusBarMessage(`CSS Controls: step ${label}`, 2000);
-
-      onDidChangeCodeLensesEmitter.fire();
+      const newStep: Step =
+        currentStep === "tenth" ? "one" : currentStep === "one" ? "ten" : "tenth";
+      updateStepAndNotify(newStep);
+    }),
+    vscode.commands.registerCommand("css-controls.increaseStep", () => {
+      const newStep: Step =
+        currentStep === "tenth" ? "one" : currentStep === "one" ? "ten" : "tenth";
+      updateStepAndNotify(newStep);
+    }),
+    vscode.commands.registerCommand("css-controls.decreaseStep", () => {
+      const newStep: Step =
+        currentStep === "tenth" ? "ten" : currentStep === "one" ? "tenth" : "one";
+      updateStepAndNotify(newStep);
     })
   );
 
@@ -122,13 +136,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider(selector, new CssNumberCodeLensProvider())
-  );
-
-  // Keep sample Hello World command (optional)
-  context.subscriptions.push(
-    vscode.commands.registerCommand("css-controls.helloWorld", () => {
-      vscode.window.showInformationMessage("Hello World from CSS Controls!");
-    })
   );
 
   // Commands that wrap Emmet increment/decrement

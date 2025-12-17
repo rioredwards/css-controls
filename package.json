@@ -21,12 +21,16 @@
   "contributes": {
     "commands": [
       {
-        "command": "css-controls.helloWorld",
-        "title": "Hello World"
-      },
-      {
         "command": "css-controls.cycleStep",
         "title": "CSS Controls: Cycle Step"
+      },
+      {
+        "command": "css-controls.increaseStep",
+        "title": "CSS Controls: Increase Step"
+      },
+      {
+        "command": "css-controls.decreaseStep",
+        "title": "CSS Controls: Decrease Step"
       },
       {
         "command": "css-controls.incrementNumber",
