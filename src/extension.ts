@@ -154,6 +154,102 @@ export function activate(context: vscode.ExtensionContext): void {
     onDidChangeCodeLensesEmitter.fire();
   };
 
+  const jumpToNumber = (direction: "next" | "previous") => {
+    if (!activeEditor) {
+      return;
+    }
+
+    const document = activeEditor.document;
+    const languageId = document.languageId;
+    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+    const isHtmlOrJsx =
+      languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+
+    if (!isCssLike && !isHtmlOrJsx) {
+      return;
+    }
+
+    const cursorPos = activeEditor.selection.active;
+    const currentLine = cursorPos.line;
+    const currentCol = cursorPos.character;
+
+    // Find all numbers on the current line
+    const ranges: vscode.Range[] = [];
+    const lineText = document.lineAt(currentLine).text;
+
+    if (isCssLike) {
+      CSS_NUMBER_REGEX.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = CSS_NUMBER_REGEX.exec(lineText)) !== null) {
+        ranges.push(
+          new vscode.Range(
+            new vscode.Position(currentLine, match.index),
+            new vscode.Position(currentLine, match.index + match[0].length)
+          )
+        );
+      }
+    } else if (isHtmlOrJsx) {
+      TAILWIND_NUMBER_REGEX.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
+        const numberStart = match.index + match[1].length + 1;
+        const numberEnd = numberStart + match[2].length;
+        ranges.push(
+          new vscode.Range(
+            new vscode.Position(currentLine, numberStart),
+            new vscode.Position(currentLine, numberEnd)
+          )
+        );
+      }
+    }
+
+    if (ranges.length === 0) {
+      return;
+    }
+
+    // Find current number index (if cursor is inside a number)
+    let currentIndex = -1;
+    for (let i = 0; i < ranges.length; i++) {
+      if (currentCol >= ranges[i].start.character && currentCol <= ranges[i].end.character) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    // If not inside a number, find the closest one
+    if (currentIndex === -1) {
+      let closestIndex = 0;
+      let closestDist = Math.abs(
+        (ranges[0].start.character + ranges[0].end.character) / 2 - currentCol
+      );
+      for (let i = 1; i < ranges.length; i++) {
+        const center = (ranges[i].start.character + ranges[i].end.character) / 2;
+        const dist = Math.abs(center - currentCol);
+        if (dist < closestDist) {
+          closestIndex = i;
+          closestDist = dist;
+        }
+      }
+      currentIndex = closestIndex;
+    }
+
+    // Calculate next/previous index
+    let targetIndex: number;
+    if (direction === "next") {
+      targetIndex = (currentIndex + 1) % ranges.length;
+    } else {
+      targetIndex = (currentIndex - 1 + ranges.length) % ranges.length;
+    }
+
+    // Move cursor to the target number
+    const targetRange = ranges[targetIndex];
+    activeEditor.selection = new vscode.Selection(targetRange.start, targetRange.start);
+    activeEditor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+
+    // Update decoration
+    updateActiveNumberDecoration();
+  };
+
   context.subscriptions.push(
     vscode.commands.registerCommand("css-controls.cycleStep", () => {
       const newStep: Step =
@@ -169,6 +265,12 @@ export function activate(context: vscode.ExtensionContext): void {
       const newStep: Step =
         currentStep === "tenth" ? "ten" : currentStep === "one" ? "tenth" : "one";
       updateStepAndNotify(newStep);
+    }),
+    vscode.commands.registerCommand("css-controls.jumpToNextNumber", () => {
+      jumpToNumber("next");
+    }),
+    vscode.commands.registerCommand("css-controls.jumpToPreviousNumber", () => {
+      jumpToNumber("previous");
     })
   );
 

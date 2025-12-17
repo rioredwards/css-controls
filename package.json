@@ -42,6 +42,14 @@
       {
         "command": "css-controls.decrementNumber",
         "title": "CSS Controls: Decrement Number"
+      },
+      {
+        "command": "css-controls.jumpToNextNumber",
+        "title": "CSS Controls: Jump to Next Number"
+      },
+      {
+        "command": "css-controls.jumpToPreviousNumber",
+        "title": "CSS Controls: Jump to Previous Number"
       }
     ],
     "codeLens": [
@@ -89,6 +97,16 @@
       {
         "key": "cmd+shift+down",
         "command": "css-controls.decreaseStep",
+        "when": "css-controls.hasActiveNumber"
+      },
+      {
+        "key": "cmd+right",
+        "command": "css-controls.jumpToNextNumber",
+        "when": "css-controls.hasActiveNumber"
+      },
+      {
+        "key": "cmd+left",
+        "command": "css-controls.jumpToPreviousNumber",
         "when": "css-controls.hasActiveNumber"
       }     
     ]
