@@ -25,6 +25,10 @@
         "title": "Hello World"
       },
       {
+        "command": "css-controls.cycleStep",
+        "title": "CSS Controls: Cycle Step"
+      },
+      {
         "command": "css-controls.incrementNumber",
         "title": "CSS Controls: Increment Number"
       },
