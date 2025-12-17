@@ -2,41 +2,8 @@ import * as vscode from "vscode";
 
 const CSS_NUMBER_REGEX = /-?\d*\.?\d+(px|rem|em|vh|vw|%|ch|fr)?/g;
 
-let arrowDecorationType: vscode.TextEditorDecorationType | undefined;
-
 export function activate(context: vscode.ExtensionContext): void {
   console.log("CSS Controls extension activated");
-
-  arrowDecorationType = vscode.window.createTextEditorDecorationType({
-    after: {
-      contentText: " ▲▼",
-      margin: "0 0 0 .5rem",
-      color: new vscode.ThemeColor("editorCodeLens.foreground"),
-    },
-  });
-
-  // Initial decorations
-  if (vscode.window.activeTextEditor) {
-    updateDecorations(vscode.window.activeTextEditor);
-  }
-
-  // React to editor/document changes
-  context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
-      if (editor) {
-        updateDecorations(editor);
-      }
-    }),
-    vscode.workspace.onDidChangeTextDocument((event) => {
-      const activeEditor = vscode.window.activeTextEditor;
-      if (activeEditor && event.document === activeEditor.document) {
-        updateDecorations(activeEditor);
-      }
-    }),
-    vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
-      updateDecorations(event.textEditor);
-    })
-  );
 
   // CodeLens provider for CSS-like languages
   const selector: vscode.DocumentSelector = [
@@ -46,7 +13,6 @@ export function activate(context: vscode.ExtensionContext): void {
   ];
 
   class CssNumberCodeLensProvider implements vscode.CodeLensProvider {
-    // eslint-disable-next-line @typescript-eslint/class-methods-use-this
     provideCodeLenses(
       document: vscode.TextDocument,
       _token: vscode.CancellationToken
@@ -100,7 +66,9 @@ export function activate(context: vscode.ExtensionContext): void {
       "css-controls.incrementNumber",
       async (lineFromLens?: number) => {
         const editor = vscode.window.activeTextEditor;
-        if (!editor) return;
+        if (!editor) {
+          return;
+        }
 
         const document = editor.document;
         const cursorPos = editor.selection.active;
@@ -122,7 +90,9 @@ export function activate(context: vscode.ExtensionContext): void {
       "css-controls.decrementNumber",
       async (lineFromLens?: number) => {
         const editor = vscode.window.activeTextEditor;
-        if (!editor) return;
+        if (!editor) {
+          return;
+        }
 
         const document = editor.document;
         const cursorPos = editor.selection.active;
@@ -143,60 +113,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {
-  if (arrowDecorationType) {
-    arrowDecorationType.dispose();
-  }
-}
-
-function updateDecorations(editor: vscode.TextEditor): void {
-  if (!arrowDecorationType) return;
-
-  const { document, visibleRanges } = editor;
-  if (!["css", "scss", "less"].includes(document.languageId)) {
-    editor.setDecorations(arrowDecorationType, []);
-    return;
-  }
-
-  const decorations: vscode.DecorationOptions[] = [];
-
-  for (const visibleRange of visibleRanges) {
-    for (let line = visibleRange.start.line; line <= visibleRange.end.line; line += 1) {
-      if (line < 0 || line >= document.lineCount) continue;
-
-      const lineText = document.lineAt(line).text;
-      let match: RegExpExecArray | null;
-
-      CSS_NUMBER_REGEX.lastIndex = 0;
-      // eslint-disable-next-line no-cond-assign
-      while ((match = CSS_NUMBER_REGEX.exec(lineText)) !== null) {
-        const startCol = match.index;
-        const endCol = match.index + match[0].length;
-
-        const range = new vscode.Range(
-          new vscode.Position(line, startCol),
-          new vscode.Position(line, endCol)
-        );
-
-        const argsJson = encodeURIComponent(JSON.stringify([line]));
-        const hover = new vscode.MarkdownString(
-          `[$(add)](command:css-controls.incrementNumber?${argsJson})  ` +
-            // the value of the number
-            `[$(remove)](command:css-controls.decrementNumber?${argsJson})`,
-          true
-        );
-        hover.isTrusted = true;
-
-        decorations.push({
-          range,
-          hoverMessage: hover,
-        });
-      }
-    }
-  }
-
-  editor.setDecorations(arrowDecorationType, decorations);
-}
+export function deactivate(): void {}
 
 function findClosestNumberRangeOnLine(
   document: vscode.TextDocument,
@@ -212,7 +129,6 @@ function findClosestNumberRangeOnLine(
   const ranges: vscode.Range[] = [];
 
   CSS_NUMBER_REGEX.lastIndex = 0;
-  // eslint-disable-next-line no-cond-assign
   while ((match = CSS_NUMBER_REGEX.exec(lineText)) !== null) {
     const startCol = match.index;
     const endCol = match.index + match[0].length;
