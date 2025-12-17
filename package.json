@@ -9,13 +9,51 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:css",
+    "onLanguage:scss",
+    "onLanguage:less"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "css-controls.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "css-controls.incrementNumber",
+        "title": "CSS Controls: Increment Number"
+      },
+      {
+        "command": "css-controls.decrementNumber",
+        "title": "CSS Controls: Decrement Number"
+      }
+    ],
+    "codeLens": [
+      {
+        "language": "css",
+        "scheme": "file"
+      },
+      {
+        "language": "scss",
+        "scheme": "file"
+      },
+      {
+        "language": "less",
+        "scheme": "file"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "css-controls.incrementNumber",
+        "key": "alt+up",
+        "when": "editorLangId == css || editorLangId == scss || editorLangId == less"
+      },
+      {
+        "command": "css-controls.decrementNumber",
+        "key": "alt+down",
+        "when": "editorLangId == css || editorLangId == scss || editorLangId == less"
       }
     ]
   },
