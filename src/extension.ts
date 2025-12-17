@@ -3,9 +3,10 @@ import * as vscode from "vscode";
 // Regex for CSS numbers (e.g., 12px, 1.5rem, 50%)
 const CSS_NUMBER_REGEX = /-?\d*\.?\d+(px|rem|em|vh|vw|%|ch|fr)?/g;
 
-// Regex for Tailwind utility classes with numbers (e.g., w-12, h-64, p-4, gap-4)
-// Matches word boundary, letters/dashes, dash, then captures the number
-const TAILWIND_NUMBER_REGEX = /\b([a-z]+(?:-[a-z]+)*)-(\d+)/g;
+// Regex for Tailwind utility classes with numbers (e.g., w-12, h-64, p-4, gap-4, rounded-tl-3.9xl)
+// Matches: prefix-number-suffix (e.g., rounded-tl-3.9xl)
+// Captures: [1] prefix, [2] number, [3] optional suffix (like 'xl')
+const TAILWIND_NUMBER_REGEX = /\b([a-z]+(?:-[a-z]+)*)-(\d+\.?\d*)([a-z]*)/g;
 
 type Step = "tenth" | "one" | "ten";
 let currentStep: Step = "one";
@@ -302,18 +303,22 @@ async function runNumberAdjustment(
         ? newNumber.toFixed(1).replace(/\.0$/, "")
         : Math.round(newNumber).toString();
 
-    // Find the full class name to replace (e.g., "w-12" -> "w-13")
+    // Find the full class name to replace (e.g., "w-12" -> "w-13" or "rounded-tl-3.9xl" -> "rounded-tl-3.8xl")
     TAILWIND_NUMBER_REGEX.lastIndex = 0;
     let classMatch: RegExpExecArray | null;
     let classRange: vscode.Range | null = null;
+    let prefix = "";
+    let suffix = "";
 
     while ((classMatch = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
-      // match[2] is the number part
+      // match[1] is prefix, match[2] is number, match[3] is optional suffix (like 'xl')
       const numberStart = classMatch.index + classMatch[0].indexOf(classMatch[2]);
       const numberEnd = numberStart + classMatch[2].length;
 
       if (numberStart === targetRange.start.character && numberEnd === targetRange.end.character) {
-        // Found the matching class, now get the full class name range
+        // Found the matching class
+        prefix = classMatch[1];
+        suffix = classMatch[3] || "";
         const classStart = classMatch.index;
         const classEnd = classMatch.index + classMatch[0].length;
         classRange = new vscode.Range(
@@ -325,9 +330,8 @@ async function runNumberAdjustment(
     }
 
     if (classRange) {
-      const fullClass = document.getText(classRange).trim();
-      // Replace the number in the class name
-      const newClass = fullClass.replace(numberText, newNumberText);
+      // Reconstruct the class with the new number: prefix-newNumber-suffix
+      const newClass = `${prefix}-${newNumberText}${suffix}`;
 
       await editor.edit((editBuilder) => {
         editBuilder.replace(classRange!, newClass);
@@ -381,10 +385,10 @@ function findClosestNumberRangeOnLine(
     }
   } else if (isHtmlOrJsx) {
     // Find Tailwind classes with numbers
-    // Match patterns like w-12, h-64, p-4, etc. and extract just the number part
+    // Match patterns like w-12, h-64, p-4, rounded-tl-3.9xl, etc. and extract just the number part
     TAILWIND_NUMBER_REGEX.lastIndex = 0;
     while ((match = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
-      // match[0] is the full match (e.g., "w-12"), match[1] is the prefix (e.g., "w"), match[2] is the number (e.g., "12")
+      // match[1] is prefix, match[2] is number, match[3] is optional suffix
       const numberStart = match.index + match[0].indexOf(match[2]);
       const numberEnd = numberStart + match[2].length;
 
