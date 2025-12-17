@@ -59,12 +59,12 @@
       {
         "command": "css-controls.incrementNumber",
         "key": "alt+up",
-        "when": "editorLangId == css || editorLangId == scss || editorLangId == less"
+        "when": "css-controls.hasActiveNumber"
       },
       {
         "command": "css-controls.decrementNumber",
         "key": "alt+down",
-        "when": "editorLangId == css || editorLangId == scss || editorLangId == less"
+        "when": "css-controls.hasActiveNumber"
       }
     ]
   },

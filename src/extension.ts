@@ -19,19 +19,61 @@ export function activate(context: vscode.ExtensionContext): void {
   let activeLine: number | undefined = activeEditor?.selection.active.line;
   const onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
 
+  const CONTEXT_KEY = "css-controls.hasActiveNumber";
+
+  const updateContext = () => {
+    const hasActiveNumber = checkIfCodeLensShouldShow();
+    vscode.commands.executeCommand("setContext", CONTEXT_KEY, hasActiveNumber);
+  };
+
+  const checkIfCodeLensShouldShow = (): boolean => {
+    if (!activeEditor) {
+      return false;
+    }
+
+    const document = activeEditor.document;
+    const languageId = document.languageId;
+    if (languageId !== "css" && languageId !== "scss" && languageId !== "less") {
+      return false;
+    }
+
+    if (typeof activeLine !== "number") {
+      return false;
+    }
+
+    if (activeLine < 0 || activeLine >= document.lineCount) {
+      return false;
+    }
+
+    const text = document.lineAt(activeLine).text;
+    CSS_NUMBER_REGEX.lastIndex = 0;
+    return CSS_NUMBER_REGEX.test(text);
+  };
+
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       activeEditor = editor;
       activeLine = editor?.selection.active.line;
+      updateContext();
       onDidChangeCodeLensesEmitter.fire();
     }),
     vscode.window.onDidChangeTextEditorSelection((event) => {
       if (event.textEditor === activeEditor) {
         activeLine = event.selections[0]?.active.line;
+        updateContext();
+        onDidChangeCodeLensesEmitter.fire();
+      }
+    }),
+    vscode.workspace.onDidChangeTextDocument((event) => {
+      if (activeEditor && event.document === activeEditor.document) {
+        updateContext();
         onDidChangeCodeLensesEmitter.fire();
       }
     })
   );
+
+  // Initialize context on activation
+  updateContext();
 
   const updateStepAndNotify = (newStep: Step) => {
     currentStep = newStep;
@@ -68,21 +110,12 @@ export function activate(context: vscode.ExtensionContext): void {
     ): vscode.ProviderResult<vscode.CodeLens[]> {
       const lenses: vscode.CodeLens[] = [];
 
+      // Only show CodeLens if this is the active editor and conditions are met
       if (!activeEditor || document.uri.toString() !== activeEditor.document.uri.toString()) {
         return lenses;
       }
 
-      if (typeof activeLine !== "number") {
-        return lenses;
-      }
-
-      if (activeLine < 0 || activeLine >= document.lineCount) {
-        return lenses;
-      }
-
-      const text = document.lineAt(activeLine).text;
-      CSS_NUMBER_REGEX.lastIndex = 0;
-      if (!CSS_NUMBER_REGEX.test(text)) {
+      if (!checkIfCodeLensShouldShow() || typeof activeLine !== "number") {
         return lenses;
       }
 
