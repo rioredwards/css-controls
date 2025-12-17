@@ -10,9 +10,8 @@ export function activate(context: vscode.ExtensionContext): void {
   arrowDecorationType = vscode.window.createTextEditorDecorationType({
     after: {
       contentText: " ▲▼",
-      margin: "0 0 0 10rem",
+      margin: "0 0 0 .5rem",
       color: new vscode.ThemeColor("editorCodeLens.foreground"),
-      borderColor: new vscode.ThemeColor("editorCodeLens.foreground"),
     },
   });
 
@@ -179,7 +178,19 @@ function updateDecorations(editor: vscode.TextEditor): void {
           new vscode.Position(line, endCol)
         );
 
-        decorations.push({ range });
+        const argsJson = encodeURIComponent(JSON.stringify([line]));
+        const hover = new vscode.MarkdownString(
+          `[$(add)](command:css-controls.incrementNumber?${argsJson})  ` +
+            // the value of the number
+            `[$(remove)](command:css-controls.decrementNumber?${argsJson})`,
+          true
+        );
+        hover.isTrusted = true;
+
+        decorations.push({
+          range,
+          hoverMessage: hover,
+        });
       }
     }
   }
