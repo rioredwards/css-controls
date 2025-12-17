@@ -57,13 +57,23 @@
     ],
     "keybindings": [
       {
+        "key": "cmd+up",
         "command": "css-controls.incrementNumber",
-        "key": "alt+up",
         "when": "css-controls.hasActiveNumber"
       },
       {
+        "key": "cmd+down",
         "command": "css-controls.decrementNumber",
-        "key": "alt+down",
+        "when": "css-controls.hasActiveNumber"
+      },
+      {
+        "key": "cmd+left",
+        "command": "css-controls.decreaseStep",
+        "when": "css-controls.hasActiveNumber"
+      },
+      {
+        "key": "cmd+right",
+        "command": "css-controls.increaseStep",
         "when": "css-controls.hasActiveNumber"
       }
     ]
