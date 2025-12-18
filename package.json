@@ -138,9 +138,10 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run lint && npm run compile && vsce pack",
+    "vscode:prepublish": "npm run lint && npm run compile",
     "vscode:publish": "vsce publish",
-    "open-marketplace:prepublish": "npm run vscode:prepublish",
+    "package": "vsce package",
+    "open-marketplace:prepublish": "npm run package",
     "open-marketplace:publish": "echo 'run the following command: npx ovsx publish <path-to-vsix-file> -p <ovsx-personal-access-token>'",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
