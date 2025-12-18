@@ -39,13 +39,7 @@ The shortcuts only activate when the extension activates. i.e. you are editing a
 
 ## Requirements
 
-VS Code version 1.107.0 or higher.
-
-## Release Notes
-
-### 1.0.0
-
-- Initial release
+VS Code or Cursor.
 
 ## Feedback
 

@@ -498,7 +498,7 @@ async function runNumberAdjustment(
   }
 
   // Save the file so that the changes are reflected in the file (don't format to minimize intrusion)
-  await vscode.commands.executeCommand("workbench.action.files.saveWithoutFormatting");
+  // await vscode.commands.executeCommand("workbench.action.files.saveWithoutFormatting");
 }
 
 function findClosestNumberRangeOnLine(
