@@ -2,9 +2,9 @@
   "name": "css-controls",
   "displayName": "CSS Controls",
   "description": "Controls for quick CSS/Tailwind tuning.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "RioEdwards",
-  "author": "Rio Edwards <rioredwards@gmail.com>", 
+  "author": "Rio Edwards <rioredwards@gmail.com>",
   "homepage": "https://github.com/rioredwards/css-controls",
   "icon": "images/CSS_Controls_Icon.png",
   "keywords": [
@@ -29,7 +29,7 @@
     "url": "https://github.com/rioredwards/css-controls/issues"
   },
   "engines": {
-    "vscode": "^1.107.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Language Packs",
@@ -44,7 +44,7 @@
     "onLanguage:typescriptreact"
   ],
   "capabilities": {
-    "hoverProvider" : "true"
+    "hoverProvider": "true"
   },
   "main": "./out/extension.js",
   "contributes": {
@@ -134,7 +134,7 @@
         "key": "cmd+left",
         "command": "css-controls.jumpToPreviousNumber",
         "when": "css-controls.hasActiveNumber"
-      }     
+      }
     ]
   },
   "scripts": {
@@ -150,7 +150,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.107.0",
+    "@types/vscode": "^1.90.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "typescript-eslint": "^8.48.1",
