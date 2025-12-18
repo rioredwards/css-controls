@@ -1,71 +1,56 @@
-# css-controls README
+# CSS Controls
 
-This is the README for your extension "css-controls". After writing up a brief description, we recommend including the following sections.
+Speed up your CSS workflow with buttons & shortcuts for speedy CSS/Tailwind adjustments.
 
-## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+![Yum Banner](https://raw.githubusercontent.com/rioredwards/css-controls/main/images/CSS_Controls_Screenshot.png)
 
-For example if there is an image subfolder under your extension project workspace:
+## Buttons
 
-\!\[feature X\]\(images/feature-x.png\)
+- Buttons appear above the current line when a CSS or Tailwind number value is detected.
+- ▲▼ - Increment/decrement the targetted number.
+- x1 - Cycle between 0.1x, 1x, and 10x step sizes.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## Keyboard Shortcuts
+
+The buttons are just a marketing ploy... the shortcuts are where the real magic happens ♡
+
+| Shortcut | Command |
+|----------|---------|
+| `Cmd+Up` | Increment number |
+| `Cmd+Down` | Decrement number |
+| `Cmd+Shift+Up` | Increase step size |
+| `Cmd+Shift+Down` | Decrease step size |
+| `Cmd+Right` | Jump to next value within current line |
+| `Cmd+Left` | Jump to previous value within current line |
+
+**Note about conflicts:**
+You can always reassign the shortcuts to your liking or disable them altogether.
+The shortcuts only activate when the extension activates. i.e. you are editing a CSS, SCSS, Less, HTML, JSX, or TSX file and your cursor is positioned on a line that contains a valid CSS or Tailwind number value. This way they minimize conflicts with existing shortcuts..
+
+## Supported File Types
+
+- CSS
+- SCSS
+- Less
+- HTML (with Tailwind classes)
+- JSX/TSX (with Tailwind classes)
+
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
+VS Code version 1.107.0 or higher.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
 ### 1.0.0
 
-Initial release of ...
+- Initial release
 
-### 1.0.1
+## Feedback
 
-Fixed issue #.
+Feel free to reach out with any questions, feedback, or suggestions.
 
-### 1.1.0
+## Authors
 
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Made with ❤️ by [Rio Edwards](https://www.linkedin.com/in/rio-edwards/)

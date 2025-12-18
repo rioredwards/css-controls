@@ -1,12 +1,38 @@
 {
   "name": "css-controls",
   "displayName": "CSS Controls",
-  "description": "Controls for CSS",
-  "version": "0.0.1",
+  "description": "Controls for quick CSS/Tailwind tuning.",
+  "version": "1.0.0",
+  "publisher": "RioEdwards",
+  "author": "Rio Edwards <rioredwards@gmail.com>", 
+  "homepage": "https://github.com/rioredwards/css-controls",
+  "icon": "images/CSS_Controls_Logo.png",
+  "keywords": [
+    "css",
+    "tailwind",
+    "controls",
+    "shortcut",
+    "codelens",
+    "quick",
+    "tuning",
+    "css-controls",
+    "css-controls-extension",
+    "rio",
+    "rio edwards",
+    "rioredwards"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rioredwards/css-controls.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rioredwards/css-controls/issues"
+  },
   "engines": {
     "vscode": "^1.107.0"
   },
   "categories": [
+    "Language Packs",
     "Other"
   ],
   "activationEvents": [
