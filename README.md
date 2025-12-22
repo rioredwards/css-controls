@@ -3,7 +3,7 @@
 Speed up your CSS workflow with buttons & shortcuts for speedy CSS/Tailwind adjustments.
 
 
-![Yum Banner](https://github.com/rioredwards/css-controls/blob/0ca7417660745d3c4f83d3c533b3618745145dde/images/CSS_Controls_Screenshot.jpg?raw=true)
+![Yum Banner](https://github.com/rioredwards/css-controls/blob/0ca7417660745d3c4f83d3c533b3618745145dde/images/CSS_Controls_Screenshot.jpeg?raw=true)
 
 ## Buttons
 
