@@ -2,7 +2,7 @@
   "name": "css-controls",
   "displayName": "CSS Controls",
   "description": "Controls for quick CSS/Tailwind tuning.",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "publisher": "RioEdwards",
   "author": "Rio Edwards <rioredwards@gmail.com>",
   "homepage": "https://github.com/rioredwards/css-controls",
@@ -35,6 +35,18 @@
     "Language Packs",
     "Other"
   ],
+  "scripts": {
+    "vscode:prepublish": "npm run lint && npm run compile",
+    "vscode:publish": "vsce publish",
+    "package": "vsce package",
+    "open-marketplace:prepublish": "npm run package",
+    "open-marketplace:publish": "echo 'run the following command: npx ovsx publish <path-to-vsix-file> -p <ovsx-personal-access-token>'",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
   "activationEvents": [
     "onLanguage:css",
     "onLanguage:scss",
@@ -56,6 +68,12 @@
           "default": true,
           "description": "Enable CSS Controls",
           "scope": "window"
+        },
+        "css-controls.enableInlineButtons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline buttons above CSS/Tailwind numbers (disable this if you just want the keyboard shortcuts)",
+          "scope": "window"
         }
       }
     },
@@ -67,6 +85,10 @@
       {
         "command": "css-controls.toggleEnabled",
         "title": "CSS Controls: Toggle Enabled"
+      },
+      {
+        "command": "css-controls.toggleInlineButtons",
+        "title": "CSS Controls: Toggle Inline Buttons"
       },
       {
         "command": "css-controls.openDocs",
@@ -155,18 +177,6 @@
         "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
       }
     ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run lint && npm run compile",
-    "vscode:publish": "vsce publish",
-    "package": "vsce package",
-    "open-marketplace:prepublish": "npm run package",
-    "open-marketplace:publish": "echo 'run the following command: npx ovsx publish <path-to-vsix-file> -p <ovsx-personal-access-token>'",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
   },
   "devDependencies": {
     "@types/vscode": "^1.90.0",

@@ -31,6 +31,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const CONTEXT_KEY = "css-controls.hasActiveNumber";
   const config = vscode.workspace.getConfiguration("css-controls");
   let isEnabled = config.get<boolean>("enabled", true);
+  let enableInlineButtons = config.get<boolean>("enableInlineButtons", true);
 
   // Create decoration type for highlighting the active number
   const activeNumberDecorationType = vscode.window.createTextEditorDecorationType({
@@ -164,6 +165,12 @@ export function activate(context: vscode.ExtensionContext): void {
         updateContext();
         onDidChangeCodeLensesEmitter.fire();
       }
+      if (event.affectsConfiguration("css-controls.enableInlineButtons")) {
+        enableInlineButtons = vscode.workspace
+          .getConfiguration("css-controls")
+          .get<boolean>("enableInlineButtons", true);
+        onDidChangeCodeLensesEmitter.fire();
+      }
     })
   );
 
@@ -197,6 +204,15 @@ export function activate(context: vscode.ExtensionContext): void {
     onDidChangeCodeLensesEmitter.fire();
     const status = isEnabled ? "enabled" : "disabled";
     vscode.window.setStatusBarMessage(`CSS Controls: ${status}`, 2000);
+  };
+
+  const toggleInlineButtons = () => {
+    const newValue = !enableInlineButtons;
+    config.update("enableInlineButtons", newValue, vscode.ConfigurationTarget.Global);
+    enableInlineButtons = newValue;
+    onDidChangeCodeLensesEmitter.fire();
+    const status = enableInlineButtons ? "shown" : "hidden";
+    vscode.window.setStatusBarMessage(`CSS Controls: inline buttons ${status}`, 2000);
   };
 
   const openExtensionDocs = async () => {
@@ -309,6 +325,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("css-controls.toggleEnabled", () => {
       toggleEnabled();
     }),
+    vscode.commands.registerCommand("css-controls.toggleInlineButtons", () => {
+      toggleInlineButtons();
+    }),
     vscode.commands.registerCommand("css-controls.openDocs", () => {
       openExtensionDocs();
     }),
@@ -346,6 +365,10 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       if (!isEnabled) {
+        return lenses;
+      }
+
+      if (!enableInlineButtons) {
         return lenses;
       }
 

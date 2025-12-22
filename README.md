@@ -29,10 +29,15 @@ The buttons are just a marketing ploy... the shortcuts are where the real magic 
 You can always reassign the shortcuts to your liking or disable them altogether.
 The shortcuts only activate when the extension activates. i.e. you are editing a CSS, SCSS, Less, HTML, JSX, or TSX file and your cursor is positioned on a line that contains a valid CSS or Tailwind number value. This way they minimize conflicts with existing shortcuts..
 
-If you ever want to temporarily turn CSS Controls off without uninstalling it:
+## Configuration
 
-- Use the `?` button to open the extension page and disable it there, or
-- Run the `CSS Controls: Toggle Enabled` command from the Command Palette.
+To quickly toggle the extension on/off, you can either:
+- Run `CSS Controls: Toggle Enabled` from the Command Palette.
+- Open Settings and turn **CSS Controls › Enabled** off (`css-controls.enabled`).
+
+If you just want the keyboard shortcuts and not the inline buttons:
+- Run `CSS Controls: Toggle Inline Buttons` from the Command Palette.
+- Open Settings and turn **CSS Controls › Enable Inline Buttons** off (`css-controls.enableInlineButtons`).
 
 ## Supported File Types
 
