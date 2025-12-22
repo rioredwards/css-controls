@@ -48,6 +48,17 @@
   },
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "CSS Controls",
+      "properties": {
+        "css-controls.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable CSS Controls",
+          "scope": "window"
+        }
+      }
+    },
     "commands": [
       {
         "command": "css-controls.cycleStep",

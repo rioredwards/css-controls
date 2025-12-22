@@ -29,7 +29,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
 
   const CONTEXT_KEY = "css-controls.hasActiveNumber";
-  let isEnabled = true;
+  const config = vscode.workspace.getConfiguration("css-controls");
+  let isEnabled = config.get<boolean>("enabled", true);
 
   // Create decoration type for highlighting the active number
   const activeNumberDecorationType = vscode.window.createTextEditorDecorationType({
@@ -156,6 +157,13 @@ export function activate(context: vscode.ExtensionContext): void {
         updateContext();
         onDidChangeCodeLensesEmitter.fire();
       }
+    }),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("css-controls.enabled")) {
+        isEnabled = vscode.workspace.getConfiguration("css-controls").get<boolean>("enabled", true);
+        updateContext();
+        onDidChangeCodeLensesEmitter.fire();
+      }
     })
   );
 
@@ -173,7 +181,9 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   const toggleEnabled = () => {
-    isEnabled = !isEnabled;
+    const newValue = !isEnabled;
+    config.update("enabled", newValue, vscode.ConfigurationTarget.Global);
+    isEnabled = newValue;
 
     if (!isEnabled) {
       vscode.commands.executeCommand("setContext", CONTEXT_KEY, false);
