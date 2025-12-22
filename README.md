@@ -17,12 +17,12 @@ The buttons are just a marketing ploy... the shortcuts are where the real magic 
 
 | Shortcut | Command |
 |----------|---------|
-| `Cmd+Up` | Increment number |
-| `Cmd+Down` | Decrement number |
-| `Cmd+Shift+Up` | Increase step size |
-| `Cmd+Shift+Down` | Decrease step size |
-| `Cmd+Right` | Jump to next value within current line |
-| `Cmd+Left` | Jump to previous value within current line |
+| `Ctrl+Up` | Increment number |
+| `Ctrl+Down` | Decrement number |
+| `Ctrl+Shift+Up` | Increase step size |
+| `Ctrl+Shift+Down` | Decrease step size |
+| `Ctrl+Shift+Right` | Jump to next value within current line |
+| `Ctrl+Shift+Left` | Jump to previous value within current line |
 
 **Note about conflicts:**
 You can always reassign the shortcuts to your liking or disable them altogether.

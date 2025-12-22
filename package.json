@@ -2,7 +2,7 @@
   "name": "css-controls",
   "displayName": "CSS Controls",
   "description": "Controls for quick CSS/Tailwind tuning.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "publisher": "RioEdwards",
   "author": "Rio Edwards <rioredwards@gmail.com>",
   "homepage": "https://github.com/rioredwards/css-controls",
@@ -106,34 +106,34 @@
     ],
     "keybindings": [
       {
-        "key": "cmd+up",
+        "key": "ctrl+up",
         "command": "css-controls.incrementNumber",
-        "when": "css-controls.hasActiveNumber"
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && !editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
       },
       {
-        "key": "cmd+down",
+        "key": "ctrl+down",
         "command": "css-controls.decrementNumber",
-        "when": "css-controls.hasActiveNumber"
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
       },
       {
-        "key": "cmd+shift+up",
+        "key": "ctrl+shift+up",
         "command": "css-controls.increaseStep",
-        "when": "css-controls.hasActiveNumber"
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
       },
       {
-        "key": "cmd+shift+down",
+        "key": "ctrl+shift+down",
         "command": "css-controls.decreaseStep",
-        "when": "css-controls.hasActiveNumber"
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
       },
       {
-        "key": "cmd+right",
+        "key": "ctrl+shift+right",
         "command": "css-controls.jumpToNextNumber",
-        "when": "css-controls.hasActiveNumber"
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
       },
       {
-        "key": "cmd+left",
+        "key": "ctrl+shift+left",
         "command": "css-controls.jumpToPreviousNumber",
-        "when": "css-controls.hasActiveNumber"
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
       }
     ]
   },

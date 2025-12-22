@@ -19,3 +19,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [1.0.3] - 2025-12-17
 
 - Small README.md update and removed save without formatting command.
+
+## [1.0.5] - 2025-12-22
+
+- Changed default keyboard shortcuts to use ctrl instead of cmd and added a more precise "when" clause to the keybindings to make the extension less disruptive.
