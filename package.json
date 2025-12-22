@@ -2,7 +2,7 @@
   "name": "css-controls",
   "displayName": "CSS Controls",
   "description": "Controls for quick CSS/Tailwind tuning.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publisher": "RioEdwards",
   "author": "Rio Edwards <rioredwards@gmail.com>",
   "homepage": "https://github.com/rioredwards/css-controls",
@@ -52,6 +52,14 @@
       {
         "command": "css-controls.cycleStep",
         "title": "CSS Controls: Cycle Step"
+      },
+      {
+        "command": "css-controls.toggleEnabled",
+        "title": "CSS Controls: Toggle Enabled"
+      },
+      {
+        "command": "css-controls.openDocs",
+        "title": "CSS Controls: Open Docs / Marketplace Page"
       },
       {
         "command": "css-controls.increaseStep",

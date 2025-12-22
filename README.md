@@ -10,6 +10,7 @@ Speed up your CSS workflow with buttons & shortcuts for speedy CSS/Tailwind adju
 - Buttons appear above the current line when a CSS or Tailwind number value is detected.
 - ▲▼ - Increment/decrement the targetted number.
 - x1 - Cycle between 0.1x, 1x, and 10x step sizes.
+- ? - Opens the CSS Controls extension page in your editor so you can view docs, tweak settings, or disable it.
 
 ## Keyboard Shortcuts
 
@@ -27,6 +28,11 @@ The buttons are just a marketing ploy... the shortcuts are where the real magic 
 **Note about conflicts:**
 You can always reassign the shortcuts to your liking or disable them altogether.
 The shortcuts only activate when the extension activates. i.e. you are editing a CSS, SCSS, Less, HTML, JSX, or TSX file and your cursor is positioned on a line that contains a valid CSS or Tailwind number value. This way they minimize conflicts with existing shortcuts..
+
+If you ever want to temporarily turn CSS Controls off without uninstalling it:
+
+- Use the `?` button to open the extension page and disable it there, or
+- Run the `CSS Controls: Toggle Enabled` command from the Command Palette.
 
 ## Supported File Types
 

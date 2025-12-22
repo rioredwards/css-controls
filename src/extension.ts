@@ -29,6 +29,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
 
   const CONTEXT_KEY = "css-controls.hasActiveNumber";
+  let isEnabled = true;
 
   // Create decoration type for highlighting the active number
   const activeNumberDecorationType = vscode.window.createTextEditorDecorationType({
@@ -40,6 +41,14 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   const updateContext = () => {
+    if (!isEnabled) {
+      vscode.commands.executeCommand("setContext", CONTEXT_KEY, false);
+      if (activeEditor) {
+        activeEditor.setDecorations(activeNumberDecorationType, []);
+      }
+      return;
+    }
+
     const hasActiveNumber = checkIfCodeLensShouldShow();
     vscode.commands.executeCommand("setContext", CONTEXT_KEY, hasActiveNumber);
     updateActiveNumberDecoration();
@@ -47,6 +56,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const updateActiveNumberDecoration = () => {
     if (!activeEditor) {
+      return;
+    }
+
+    if (!isEnabled) {
+      activeEditor.setDecorations(activeNumberDecorationType, []);
       return;
     }
 
@@ -80,6 +94,10 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   const checkIfCodeLensShouldShow = (): boolean => {
+    if (!isEnabled) {
+      return false;
+    }
+
     if (!activeEditor) {
       return false;
     }
@@ -154,8 +172,30 @@ export function activate(context: vscode.ExtensionContext): void {
     onDidChangeCodeLensesEmitter.fire();
   };
 
+  const toggleEnabled = () => {
+    isEnabled = !isEnabled;
+
+    if (!isEnabled) {
+      vscode.commands.executeCommand("setContext", CONTEXT_KEY, false);
+      if (activeEditor) {
+        activeEditor.setDecorations(activeNumberDecorationType, []);
+      }
+    } else {
+      updateContext();
+    }
+
+    onDidChangeCodeLensesEmitter.fire();
+    const status = isEnabled ? "enabled" : "disabled";
+    vscode.window.setStatusBarMessage(`CSS Controls: ${status}`, 2000);
+  };
+
+  const openExtensionDocs = async () => {
+    // Open this extension's details page in the Extensions view
+    await vscode.commands.executeCommand("extension.open", "RioEdwards.css-controls");
+  };
+
   const jumpToNumber = (direction: "next" | "previous") => {
-    if (!activeEditor) {
+    if (!activeEditor || !isEnabled) {
       return;
     }
 
@@ -256,6 +296,12 @@ export function activate(context: vscode.ExtensionContext): void {
         currentStep === "tenth" ? "one" : currentStep === "one" ? "ten" : "tenth";
       updateStepAndNotify(newStep);
     }),
+    vscode.commands.registerCommand("css-controls.toggleEnabled", () => {
+      toggleEnabled();
+    }),
+    vscode.commands.registerCommand("css-controls.openDocs", () => {
+      openExtensionDocs();
+    }),
     vscode.commands.registerCommand("css-controls.increaseStep", () => {
       const newStep: Step =
         currentStep === "tenth" ? "one" : currentStep === "one" ? "ten" : "tenth";
@@ -289,6 +335,10 @@ export function activate(context: vscode.ExtensionContext): void {
         return lenses;
       }
 
+      if (!isEnabled) {
+        return lenses;
+      }
+
       if (!checkIfCodeLensShouldShow() || typeof activeLine !== "number") {
         return lenses;
       }
@@ -316,24 +366,29 @@ export function activate(context: vscode.ExtensionContext): void {
             };
 
       lenses.push(
+        new vscode.CodeLens(range, {
+          title: "?",
+          command: "css-controls.openDocs",
+          tooltip: "Open CSS Controls docs and settings (css-controls)",
+        }),
         // Step indicator / cycle control
         new vscode.CodeLens(range, {
           title: `x${stepConfig.label}`,
           command: "css-controls.cycleStep",
-          tooltip: "Cycle CSS Controls step (0.1, 1, 10)",
+          tooltip: "Cycle CSS Controls step (0.1, 1, 10) (css-controls)",
         }),
         // Decrement / increment for the current step
         new vscode.CodeLens(range, {
           title: `▼`,
           command: stepConfig.decCommand,
           arguments: [activeLine],
-          tooltip: `Decrement number by ${stepConfig.label}`,
+          tooltip: `Decrement number by ${stepConfig.label} (css-controls)`,
         }),
         new vscode.CodeLens(range, {
           title: `▲`,
           command: stepConfig.incCommand,
           arguments: [activeLine],
-          tooltip: `Increment number by ${stepConfig.label}`,
+          tooltip: `Increment number by ${stepConfig.label} (css-controls)`,
         })
       );
 

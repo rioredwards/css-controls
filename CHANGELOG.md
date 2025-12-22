@@ -23,3 +23,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [1.0.5] - 2025-12-22
 
 - Changed default keyboard shortcuts to use ctrl instead of cmd and added a more precise "when" clause to the keybindings to make the extension less disruptive.
+
+## [1.0.6] - 2025-12-22
+
+- Added an inline help `?` control that opens the CSS Controls extension page in the editor for docs and settings.
+- Updated CodeLens tooltips to include `(css-controls)` and added a command to quickly enable/disable the extension without uninstalling it.
