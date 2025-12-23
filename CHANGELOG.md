@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.2.1] - 2025-12-23
+
+- New logo!
+
 ## [1.2.0] - 2025-12-23
 
 - Extended support to move beyond just numbers! CSS-Controls now supports controlling the common flexbox alignment properties (`justify-content`, `align-items`, `align-self`). These can be cycled through with the same inline buttons and keyboard shortcuts as numeric values.
