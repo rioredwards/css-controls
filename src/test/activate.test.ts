@@ -12,8 +12,8 @@ suite("Activate Wiring Test Suite", () => {
       "css-controls.toggleEnabled",
       "css-controls.toggleInlineButtons",
       "css-controls.openDocs",
-      "css-controls.incrementNumber",
-      "css-controls.decrementNumber",
+      "css-controls.incrementValue",
+      "css-controls.decrementValue",
       "css-controls.jumpToNextNumber",
       "css-controls.jumpToPreviousNumber",
     ];

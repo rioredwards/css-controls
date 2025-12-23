@@ -1,13 +1,16 @@
 import * as vscode from "vscode";
 import { createCodeLensProvider } from "./codelens";
 import {
-  createCyclePropertyValueCommand,
   createJumpToNumberCommand,
   createToggleEnabledCommand,
   createToggleInlineButtonsCommand,
 } from "./commands";
-import { SELECTOR, TAILWIND_NUMBER_REGEX, isHtmlOrJsxLanguage } from "./constants";
-import { findClosestNumberRangeOnLine } from "./detection";
+import { PROPERTY_VALUES, SELECTOR, TAILWIND_NUMBER_REGEX, isHtmlOrJsxLanguage } from "./constants";
+import {
+  PropertyValueInfo,
+  findClosestNumberRangeOnLine,
+  findClosestPropertyValueRangeOnLine,
+} from "./detection";
 import { createCssControlsState } from "./state";
 
 type Step = "tenth" | "one" | "ten";
@@ -95,58 +98,38 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("css-controls.jumpToPreviousNumber", jumpToPreviousNumber)
   );
 
-  const cyclePropertyValueForward = createCyclePropertyValueCommand(
-    state,
-    "forward",
-    () => currentStep
-  );
-  const cyclePropertyValueBackward = createCyclePropertyValueCommand(
-    state,
-    "backward",
-    () => currentStep
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "css-controls.cyclePropertyValueForward",
-      cyclePropertyValueForward
-    ),
-    vscode.commands.registerCommand(
-      "css-controls.cyclePropertyValueBackward",
-      cyclePropertyValueBackward
-    )
-  );
-
   // --- CodeLens provider ----------------------------------------------------
 
   const provider = createCodeLensProvider(state, () => {
     if (currentStep === "tenth") {
       return {
         label: "0.1",
-        incCommand: "css-controls.incrementNumberByTenth",
-        decCommand: "css-controls.decrementNumberByTenth",
+        incCommand: "css-controls.incrementValueByTenth",
+        decCommand: "css-controls.decrementValueByTenth",
       };
     }
     if (currentStep === "one") {
       return {
         label: "1",
-        incCommand: "css-controls.incrementNumber",
-        decCommand: "css-controls.decrementNumber",
+        incCommand: "css-controls.incrementValue",
+        decCommand: "css-controls.decrementValue",
       };
     }
     return {
       label: "10",
-      incCommand: "css-controls.incrementNumberByTen",
-      decCommand: "css-controls.decrementNumberByTen",
+      incCommand: "css-controls.incrementValueByTen",
+      decCommand: "css-controls.decrementValueByTen",
     };
   });
 
   context.subscriptions.push(vscode.languages.registerCodeLensProvider(selector, provider));
 
   // Commands that wrap Emmet increment/decrement
+  // These commands now adjust either numbers or supported property values,
+  // depending on which is closest to the cursor.
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "css-controls.incrementNumber",
+      "css-controls.incrementValue",
       async (lineFromLens?: number) => {
         const emmetCommand =
           currentStep === "tenth"
@@ -154,11 +137,11 @@ export function activate(context: vscode.ExtensionContext): void {
             : currentStep === "one"
             ? "editor.emmet.action.incrementNumberByOne"
             : "editor.emmet.action.incrementNumberByTen";
-        await runNumberAdjustment(lineFromLens, emmetCommand);
+        await runValueAdjustment(lineFromLens, emmetCommand);
       }
     ),
     vscode.commands.registerCommand(
-      "css-controls.decrementNumber",
+      "css-controls.decrementValue",
       async (lineFromLens?: number) => {
         const emmetCommand =
           currentStep === "tenth"
@@ -166,31 +149,31 @@ export function activate(context: vscode.ExtensionContext): void {
             : currentStep === "one"
             ? "editor.emmet.action.decrementNumberByOne"
             : "editor.emmet.action.decrementNumberByTen";
-        await runNumberAdjustment(lineFromLens, emmetCommand);
+        await runValueAdjustment(lineFromLens, emmetCommand);
       }
     ),
     vscode.commands.registerCommand(
-      "css-controls.incrementNumberByTenth",
+      "css-controls.incrementValueByTenth",
       async (lineFromLens?: number) => {
-        await runNumberAdjustment(lineFromLens, "editor.emmet.action.incrementNumberByOneTenth");
+        await runValueAdjustment(lineFromLens, "editor.emmet.action.incrementNumberByOneTenth");
       }
     ),
     vscode.commands.registerCommand(
-      "css-controls.decrementNumberByTenth",
+      "css-controls.decrementValueByTenth",
       async (lineFromLens?: number) => {
-        await runNumberAdjustment(lineFromLens, "editor.emmet.action.decrementNumberByOneTenth");
+        await runValueAdjustment(lineFromLens, "editor.emmet.action.decrementNumberByOneTenth");
       }
     ),
     vscode.commands.registerCommand(
-      "css-controls.incrementNumberByTen",
+      "css-controls.incrementValueByTen",
       async (lineFromLens?: number) => {
-        await runNumberAdjustment(lineFromLens, "editor.emmet.action.incrementNumberByTen");
+        await runValueAdjustment(lineFromLens, "editor.emmet.action.incrementNumberByTen");
       }
     ),
     vscode.commands.registerCommand(
-      "css-controls.decrementNumberByTen",
+      "css-controls.decrementValueByTen",
       async (lineFromLens?: number) => {
-        await runNumberAdjustment(lineFromLens, "editor.emmet.action.decrementNumberByTen");
+        await runValueAdjustment(lineFromLens, "editor.emmet.action.decrementNumberByTen");
       }
     )
   );
@@ -198,17 +181,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {}
 
-/**
- * Adjusts the numeric token at or near a specified line or the current cursor using Emmet or Tailwind-aware logic.
- *
- * If an active editor and a numeric token are found, moves the selection to the token, reveals it in the editor, and then:
- * - for HTML/JSX documents, invokes Tailwind-specific adjustment logic that updates class-based numbers when applicable;
- * - for other documents, executes the provided Emmet command.
- *
- * @param lineFromLens - Optional zero-based line index from a CodeLens; when omitted the current cursor line is used.
- * @param emmetCommand - The Emmet command ID to execute for non-HTML/JSX adjustments (also indicates increment/decrement intent).
- */
-async function runNumberAdjustment(
+// Core adjustment routine used by all increment/decrement commands.
+// It decides whether to adjust a numeric value or a supported property value
+// based on which is closest to the cursor on the target line.
+async function runValueAdjustment(
   lineFromLens: number | undefined,
   emmetCommand: string
 ): Promise<void> {
@@ -225,11 +201,33 @@ async function runNumberAdjustment(
   const targetLine = typeof lineFromLens === "number" ? lineFromLens : cursorPos.line;
   const referenceColumn = cursorPos.line === targetLine ? cursorPos.character : undefined;
 
-  const targetRange = findClosestNumberRangeOnLine(document, targetLine, referenceColumn);
+  // Decide whether to adjust a flexbox property value or a number,
+  // based on which is closest to the cursor.
+  const numberRange = findClosestNumberRangeOnLine(document, targetLine, referenceColumn);
+  const propertyInfo = findClosestPropertyValueRangeOnLine(document, targetLine, referenceColumn);
 
-  if (!targetRange) {
+  if (!numberRange && !propertyInfo) {
     return;
   }
+
+  const refCol = referenceColumn ?? 0;
+
+  let useProperty = false;
+  if (numberRange && propertyInfo) {
+    const numberCenter = (numberRange.start.character + numberRange.end.character) / 2;
+    const propertyCenter =
+      (propertyInfo.range.start.character + propertyInfo.range.end.character) / 2;
+    useProperty = Math.abs(propertyCenter - refCol) <= Math.abs(numberCenter - refCol);
+  } else if (propertyInfo) {
+    useProperty = true;
+  }
+
+  if (useProperty && propertyInfo) {
+    await applyPropertyValueAdjustment(document, targetLine, propertyInfo, emmetCommand);
+    return;
+  }
+
+  const targetRange = numberRange!;
 
   editor.selection = new vscode.Selection(targetRange.start, targetRange.start);
   editor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
@@ -321,4 +319,65 @@ async function applyTailwindNumberAdjustment(
       editBuilder.replace(targetRange, newNumberText);
     });
   }
+}
+
+async function applyPropertyValueAdjustment(
+  document: vscode.TextDocument,
+  targetLine: number,
+  propertyInfo: PropertyValueInfo,
+  emmetCommand: string
+): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+
+  const { property, value, range } = propertyInfo;
+  const validValues = PROPERTY_VALUES[property];
+
+  if (!validValues || validValues.length === 0) {
+    return;
+  }
+
+  const currentIndex = validValues.findIndex((v) => v.toLowerCase() === value.toLowerCase());
+
+  if (currentIndex === -1) {
+    return;
+  }
+
+  const isIncrement = emmetCommand.includes("increment");
+  const direction = isIncrement ? 1 : -1;
+
+  const newIndex = (currentIndex + direction + validValues.length) % validValues.length;
+  const newValue = validValues[newIndex];
+
+  const lineText = document.lineAt(targetLine).text;
+  const valueAfterCurrent = lineText.substring(range.end.character);
+
+  const importantMatch = valueAfterCurrent.match(/^\s*!\s*important/i);
+  const hasImportant = importantMatch !== null;
+
+  const replacement = hasImportant ? `${newValue} !important` : newValue;
+
+  await editor.edit((editBuilder) => {
+    if (hasImportant && importantMatch && importantMatch.index !== undefined) {
+      const fullRange = new vscode.Range(
+        range.start,
+        new vscode.Position(
+          targetLine,
+          range.end.character + importantMatch.index + importantMatch[0].length
+        )
+      );
+      editBuilder.replace(fullRange, replacement);
+    } else {
+      editBuilder.replace(range, newValue);
+    }
+  });
+
+  const newRange = new vscode.Range(
+    range.start,
+    new vscode.Position(range.start.line, range.start.character + newValue.length)
+  );
+  editor.selection = new vscode.Selection(newRange.start, newRange.start);
+  editor.revealRange(newRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 }
