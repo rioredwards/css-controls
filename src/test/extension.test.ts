@@ -53,4 +53,39 @@ suite("Extension Test Suite", () => {
     // Range should cover just the core value we cycle, not the !important
     assert.strictEqual(valueText, "center");
   });
+
+  test("findClosestPropertyValueRangeOnLine handles extra spaces and no semicolon", async () => {
+    const doc = await vscode.workspace.openTextDocument({
+      language: "css",
+      content: ".row {   justify-content  :   flex-end  }",
+    });
+
+    // Cursor roughly over "flex-end"
+    const info = findClosestPropertyValueRangeOnLine(doc, 0, 30);
+    assert.ok(info, "Expected a property value match with irregular spacing");
+    assert.strictEqual(info!.property, "justify-content");
+    const valueText = doc.getText(info!.range);
+    assert.strictEqual(valueText, "flex-end");
+  });
+
+  test("findClosestPropertyValueRangeOnLine chooses closest property when multiple on same line", async () => {
+    const doc = await vscode.workspace.openTextDocument({
+      language: "css",
+      content: ".row { justify-content: center; align-items: flex-start; align-self: flex-end; }",
+    });
+
+    // Cursor near align-items value
+    const infoAlignItems = findClosestPropertyValueRangeOnLine(doc, 0, 50);
+    assert.ok(infoAlignItems, "Expected a property value match near align-items");
+    assert.strictEqual(infoAlignItems!.property, "align-items");
+    const valueAlignItems = doc.getText(infoAlignItems!.range);
+    assert.strictEqual(valueAlignItems, "flex-start");
+
+    // Cursor near align-self value
+    const infoAlignSelf = findClosestPropertyValueRangeOnLine(doc, 0, 75);
+    assert.ok(infoAlignSelf, "Expected a property value match near align-self");
+    assert.strictEqual(infoAlignSelf!.property, "align-self");
+    const valueAlignSelf = doc.getText(infoAlignSelf!.range);
+    assert.strictEqual(valueAlignSelf, "flex-end");
+  });
 });
