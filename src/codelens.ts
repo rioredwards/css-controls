@@ -2,6 +2,13 @@ import * as vscode from "vscode";
 import { findClosestPropertyValueRangeOnLine } from "./detection";
 import { CssControlsState } from "./state";
 
+/**
+ * Create a CodeLens provider that displays inline CSS Controls buttons for the active editor line.
+ *
+ * @param state - The shared CssControlsState used to determine the active editor/line, enabled flags, and whether a property value or number is active.
+ * @param getCurrentStepLabel - Function that returns the current step configuration: `{ label, incCommand, decCommand }` used for numeric controls.
+ * @returns A vscode.CodeLensProvider that exposes onDidChangeCodeLenses and provides CodeLenses which include a help button, property-value cycling buttons when the cursor is on a property value, or a step indicator plus decrement/increment buttons when the cursor is on a numeric value.
+ */
 export function createCodeLensProvider(
   state: CssControlsState,
   getCurrentStepLabel: () => { label: string; incCommand: string; decCommand: string }

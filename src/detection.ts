@@ -7,6 +7,13 @@ import {
   isHtmlOrJsxLanguage,
 } from "./constants";
 
+/**
+ * Find numeric token ranges on the specified line, adapting detection to the document's language mode.
+ *
+ * @param document - The VS Code text document to inspect
+ * @param lineNumber - Zero-based line index to search for numeric tokens
+ * @returns An array of `vscode.Range` objects for each detected numeric token on the line; an empty array if none are found
+ */
 export function getNumberRangesOnLine(
   document: vscode.TextDocument,
   lineNumber: number
@@ -55,6 +62,13 @@ export function getNumberRangesOnLine(
   return ranges;
 }
 
+/**
+ * Selects the numeric token range on a given line that is nearest to a reference column.
+ *
+ * @param lineNumber - Zero-based index of the line to examine.
+ * @param referenceColumn - Optional zero-based column to measure proximity from; defaults to `0`.
+ * @returns The `vscode.Range` covering the numeric token closest to `referenceColumn`, or `null` if the line is out of bounds or contains no numeric tokens.
+ */
 export function findClosestNumberRangeOnLine(
   document: vscode.TextDocument,
   lineNumber: number,
@@ -101,6 +115,16 @@ export interface PropertyValueInfo {
   value: string;
 }
 
+/**
+ * Finds the CSS property value on the given line that contains or is closest to a reference column and returns its range and metadata.
+ *
+ * Works only for CSS-like languages; returns `null` if the line is out of range, the language is not CSS-like, or no matching property/value is found.
+ *
+ * @param document - The text document to inspect
+ * @param lineNumber - The zero-based line number to search
+ * @param referenceColumn - Column to use when choosing the closest match; defaults to `0` when omitted
+ * @returns A PropertyValueInfo describing the matched property's value range, property name, and canonical matched value, or `null` if no match is found
+ */
 export function findClosestPropertyValueRangeOnLine(
   document: vscode.TextDocument,
   lineNumber: number,

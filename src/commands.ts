@@ -5,6 +5,12 @@ import { CssControlsState } from "./state";
 
 type Step = "tenth" | "one" | "ten";
 
+/**
+ * Create a command that toggles the extension's enabled state.
+ *
+ * @param state - The CssControlsState instance used to read and update the enabled flag.
+ * @returns A command function that toggles the enabled state and displays a short status bar message.
+ */
 export function createToggleEnabledCommand(state: CssControlsState): () => void {
   return () => {
     const newValue = !state.isEnabled;
@@ -14,6 +20,12 @@ export function createToggleEnabledCommand(state: CssControlsState): () => void 
   };
 }
 
+/**
+ * Create a command that toggles the visibility of inline CSS control buttons.
+ *
+ * @param state - The CssControlsState instance used to read and update inline button visibility.
+ * @returns A function which, when invoked, toggles the inline buttons setting and shows a short status message.
+ */
 export function createToggleInlineButtonsCommand(state: CssControlsState): () => void {
   return () => {
     const newValue = !state.enableInlineButtons;
@@ -23,6 +35,14 @@ export function createToggleInlineButtonsCommand(state: CssControlsState): () =>
   };
 }
 
+/**
+ * Creates a command that moves the editor cursor to the next or previous numeric literal on the current line.
+ *
+ * This command is a no-op when there is no active editor, the feature is disabled, the document language is not CSS-like or HTML/JSX, or when the current line contains no numbers. When executed it selects the start of the target number, reveals it in the center of the viewport if necessary, and refreshes decorations and context via the provided state.
+ *
+ * @param direction - "next" to advance to the following number on the line, "previous" to move to the preceding number (wraps around).
+ * @returns A command function that moves the cursor to the target numeric literal on the current line and updates decorations/context.
+ */
 export function createJumpToNumberCommand(
   state: CssControlsState,
   direction: "next" | "previous"
@@ -97,6 +117,13 @@ export function createJumpToNumberCommand(
   };
 }
 
+/**
+ * Creates a command that cycles the CSS property value at the cursor through its allowed values.
+ *
+ * @param state - Extension state used to access the active editor, configuration, and to refresh decorations/context
+ * @param direction - "forward" to advance to the next value, "backward" to move to the previous value
+ * @param currentStep - Function that returns the current step size (provided by caller for consistency with other commands)
+ * @returns A command function that locates the nearest property value on the current line, replaces it with the next or previous value from the predefined list (preserving trailing modifiers such as `!important`), repositions the cursor to the new value, recenters the view if necessary, and updates decorations/context.
 export function createCyclePropertyValueCommand(
   state: CssControlsState,
   direction: "forward" | "backward",
