@@ -6,6 +6,8 @@ import {
   PROPERTY_VALUES,
   SELECTOR,
   TAILWIND_NUMBER_REGEX,
+  isCssLikeLanguage,
+  isHtmlOrJsxLanguage,
 } from "./constants";
 import { findClosestNumberRangeOnLine, findClosestPropertyValueRangeOnLine } from "./detection";
 
@@ -70,9 +72,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const document = activeEditor.document;
     const languageId = document.languageId;
-    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
-    const isHtmlOrJsx =
-      languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+    const isCssLike = isCssLikeLanguage(languageId);
+    const isHtmlOrJsx = isHtmlOrJsxLanguage(languageId);
 
     if (!isCssLike && !isHtmlOrJsx) {
       activeEditor.setDecorations(activeNumberDecorationType, []);
@@ -149,7 +150,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const document = activeEditor.document;
     const languageId = document.languageId;
-    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+    const isCssLike = isCssLikeLanguage(languageId);
 
     if (!isCssLike) {
       return false;
@@ -267,9 +268,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const document = activeEditor.document;
     const languageId = document.languageId;
-    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
-    const isHtmlOrJsx =
-      languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+    const isCssLike = isCssLikeLanguage(languageId);
+    const isHtmlOrJsx = isHtmlOrJsxLanguage(languageId);
 
     if (!isCssLike && !isHtmlOrJsx) {
       return;

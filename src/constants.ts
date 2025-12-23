@@ -37,3 +37,10 @@ export const SELECTOR: vscode.DocumentSelector = [
   { language: "javascriptreact", scheme: "file" },
   { language: "typescriptreact", scheme: "file" },
 ];
+
+// Language helpers
+export const isCssLikeLanguage = (languageId: string): boolean =>
+  languageId === "css" || languageId === "scss" || languageId === "less";
+
+export const isHtmlOrJsxLanguage = (languageId: string): boolean =>
+  languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";

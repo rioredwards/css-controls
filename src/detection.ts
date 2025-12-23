@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import { CSS_NUMBER_REGEX, PROPERTY_VALUES, TAILWIND_NUMBER_REGEX } from "./constants";
+import {
+  CSS_NUMBER_REGEX,
+  PROPERTY_VALUES,
+  TAILWIND_NUMBER_REGEX,
+  isCssLikeLanguage,
+  isHtmlOrJsxLanguage,
+} from "./constants";
 
 export function findClosestNumberRangeOnLine(
   document: vscode.TextDocument,
@@ -12,9 +18,8 @@ export function findClosestNumberRangeOnLine(
 
   const lineText = document.lineAt(lineNumber).text;
   const languageId = document.languageId;
-  const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
-  const isHtmlOrJsx =
-    languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+  const isCssLike = isCssLikeLanguage(languageId);
+  const isHtmlOrJsx = isHtmlOrJsxLanguage(languageId);
 
   let match: RegExpExecArray | null;
   const ranges: vscode.Range[] = [];
@@ -97,7 +102,7 @@ export function findClosestPropertyValueRangeOnLine(
   }
 
   const languageId = document.languageId;
-  const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+  const isCssLike = isCssLikeLanguage(languageId);
 
   // Only work with CSS-like files for now
   if (!isCssLike) {
