@@ -149,7 +149,7 @@
       {
         "key": "ctrl+up",
         "command": "css-controls.incrementValue",
-        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && !editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && (css-controls.hasActiveNumber || css-controls.hasActivePropertyValue)"
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && (css-controls.hasActiveNumber || css-controls.hasActivePropertyValue)"
       },
       {
         "key": "ctrl+down",
