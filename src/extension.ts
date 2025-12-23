@@ -1,7 +1,5 @@
 import * as vscode from "vscode";
 import {
-  CONTEXT_KEY_NUMBER,
-  CONTEXT_KEY_PROPERTY,
   PROPERTY_VALUES,
   SELECTOR,
   TAILWIND_NUMBER_REGEX,
@@ -13,6 +11,7 @@ import {
   findClosestPropertyValueRangeOnLine,
   getNumberRangesOnLine,
 } from "./detection";
+import { createCssControlsState } from "./state";
 
 type Step = "tenth" | "one" | "ten";
 let currentStep: Step = "one";
@@ -27,199 +26,27 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // --- State & configuration ------------------------------------------------
 
-  let activeEditor = vscode.window.activeTextEditor;
-  let activeLine: number | undefined = activeEditor?.selection.active.line;
-  const onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
-
-  const config = vscode.workspace.getConfiguration("css-controls");
-  let isEnabled = config.get<boolean>("enabled", true);
-  let enableInlineButtons = config.get<boolean>("enableInlineButtons", true);
-
-  // --- Context & decorations ------------------------------------------------
-
-  // Create decoration type for highlighting the active number
-  const activeNumberDecorationType = vscode.window.createTextEditorDecorationType({
-    backgroundColor: new vscode.ThemeColor("editor.selectionBackground"),
-    borderColor: new vscode.ThemeColor("editor.selectionBackground"),
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderRadius: "2px",
-  });
-
-  const updateContext = () => {
-    if (!isEnabled) {
-      vscode.commands.executeCommand("setContext", CONTEXT_KEY_NUMBER, false);
-      vscode.commands.executeCommand("setContext", CONTEXT_KEY_PROPERTY, false);
-      if (activeEditor) {
-        activeEditor.setDecorations(activeNumberDecorationType, []);
-      }
-      return;
-    }
-
-    const hasActiveNumber = checkIfNumberShouldShow();
-    const hasActiveProperty = checkIfPropertyValueShouldShow();
-    vscode.commands.executeCommand("setContext", CONTEXT_KEY_NUMBER, hasActiveNumber);
-    vscode.commands.executeCommand("setContext", CONTEXT_KEY_PROPERTY, hasActiveProperty);
-    updateActiveDecoration();
-  };
-
-  const updateActiveDecoration = () => {
-    if (!activeEditor) {
-      return;
-    }
-
-    if (!isEnabled) {
-      activeEditor.setDecorations(activeNumberDecorationType, []);
-      return;
-    }
-
-    const document = activeEditor.document;
-    const languageId = document.languageId;
-    const isCssLike = isCssLikeLanguage(languageId);
-    const isHtmlOrJsx = isHtmlOrJsxLanguage(languageId);
-
-    if (!isCssLike && !isHtmlOrJsx) {
-      activeEditor.setDecorations(activeNumberDecorationType, []);
-      return;
-    }
-
-    const cursorPos = activeEditor.selection.active;
-    const cursorLine = cursorPos.line;
-
-    if (cursorLine < 0 || cursorLine >= document.lineCount) {
-      activeEditor.setDecorations(activeNumberDecorationType, []);
-      return;
-    }
-
-    // Check for property value first (takes precedence), then number
-    const propertyRange = findClosestPropertyValueRangeOnLine(
-      document,
-      cursorLine,
-      cursorPos.character
-    );
-    const numberRange = findClosestNumberRangeOnLine(document, cursorLine, cursorPos.character);
-
-    if (propertyRange) {
-      activeEditor.setDecorations(activeNumberDecorationType, [propertyRange.range]);
-    } else if (numberRange) {
-      activeEditor.setDecorations(activeNumberDecorationType, [numberRange]);
-    } else {
-      activeEditor.setDecorations(activeNumberDecorationType, []);
-    }
-  };
-
-  // --- Detection helpers ----------------------------------------------------
-
-  const checkIfNumberShouldShow = (): boolean => {
-    if (!isEnabled) {
-      return false;
-    }
-
-    if (!activeEditor) {
-      return false;
-    }
-
-    const document = activeEditor.document;
-    const languageId = document.languageId;
-    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
-    const isHtmlOrJsx =
-      languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
-
-    if (!isCssLike && !isHtmlOrJsx) {
-      return false;
-    }
-
-    if (typeof activeLine !== "number") {
-      return false;
-    }
-
-    if (activeLine < 0 || activeLine >= document.lineCount) {
-      return false;
-    }
-
-    const cursorPos = activeEditor.selection.active;
-    const numberRange = findClosestNumberRangeOnLine(document, activeLine, cursorPos.character);
-    return numberRange !== null;
-  };
-
-  const checkIfPropertyValueShouldShow = (): boolean => {
-    if (!isEnabled) {
-      return false;
-    }
-
-    if (!activeEditor) {
-      return false;
-    }
-
-    const document = activeEditor.document;
-    const languageId = document.languageId;
-    const isCssLike = isCssLikeLanguage(languageId);
-
-    if (!isCssLike) {
-      return false;
-    }
-
-    if (typeof activeLine !== "number") {
-      return false;
-    }
-
-    if (activeLine < 0 || activeLine >= document.lineCount) {
-      return false;
-    }
-
-    const cursorPos = activeEditor.selection.active;
-    const propertyRange = findClosestPropertyValueRangeOnLine(
-      document,
-      activeLine,
-      cursorPos.character
-    );
-    return propertyRange !== null;
-  };
-
-  const checkIfCodeLensShouldShow = (): boolean => {
-    return checkIfNumberShouldShow() || checkIfPropertyValueShouldShow();
-  };
+  const state = createCssControlsState("css-controls");
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      activeEditor = editor;
-      activeLine = editor?.selection.active.line;
-      updateContext();
-      onDidChangeCodeLensesEmitter.fire();
+      state.updateFromActiveEditor(editor);
     }),
     vscode.window.onDidChangeTextEditorSelection((event) => {
-      if (event.textEditor === activeEditor) {
-        activeLine = event.selections[0]?.active.line;
-        updateContext();
-        onDidChangeCodeLensesEmitter.fire();
+      if (event.textEditor === state.activeEditor) {
+        state.updateFromSelection(event.selections);
       }
     }),
     vscode.workspace.onDidChangeTextDocument((event) => {
-      if (activeEditor && event.document === activeEditor.document) {
-        updateContext();
-        onDidChangeCodeLensesEmitter.fire();
-      }
+      state.updateFromDocumentChange(event.document);
     }),
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("css-controls.enabled")) {
-        isEnabled = vscode.workspace.getConfiguration("css-controls").get<boolean>("enabled", true);
-        updateContext();
-        onDidChangeCodeLensesEmitter.fire();
-      }
-      if (event.affectsConfiguration("css-controls.enableInlineButtons")) {
-        enableInlineButtons = vscode.workspace
-          .getConfiguration("css-controls")
-          .get<boolean>("enableInlineButtons", true);
-        onDidChangeCodeLensesEmitter.fire();
-      }
+      state.updateFromConfigChange(event);
     })
   );
 
-  // Initialize context on activation
-  updateContext();
-
   // Clean up decoration on deactivation
-  context.subscriptions.push(activeNumberDecorationType);
+  context.subscriptions.push(state.decorationType);
 
   // --- Commands -------------------------------------------------------------
 
@@ -227,35 +54,21 @@ export function activate(context: vscode.ExtensionContext): void {
     currentStep = newStep;
     const label = currentStep === "tenth" ? "±0.1" : currentStep === "one" ? "±1" : "±10";
     vscode.window.setStatusBarMessage(`CSS Controls: step ${label}`, 2000);
-    onDidChangeCodeLensesEmitter.fire();
+    state.updateContextAndDecorations();
+    state.notifyCodeLensChange();
   };
 
   const toggleEnabled = () => {
-    const newValue = !isEnabled;
-    config.update("enabled", newValue, vscode.ConfigurationTarget.Global);
-    isEnabled = newValue;
-
-    if (!isEnabled) {
-      vscode.commands.executeCommand("setContext", CONTEXT_KEY_NUMBER, false);
-      vscode.commands.executeCommand("setContext", CONTEXT_KEY_PROPERTY, false);
-      if (activeEditor) {
-        activeEditor.setDecorations(activeNumberDecorationType, []);
-      }
-    } else {
-      updateContext();
-    }
-
-    onDidChangeCodeLensesEmitter.fire();
-    const status = isEnabled ? "enabled" : "disabled";
+    const newValue = !state.isEnabled;
+    state.setEnabled(newValue);
+    const status = newValue ? "enabled" : "disabled";
     vscode.window.setStatusBarMessage(`CSS Controls: ${status}`, 2000);
   };
 
   const toggleInlineButtons = () => {
-    const newValue = !enableInlineButtons;
-    config.update("enableInlineButtons", newValue, vscode.ConfigurationTarget.Global);
-    enableInlineButtons = newValue;
-    onDidChangeCodeLensesEmitter.fire();
-    const status = enableInlineButtons ? "shown" : "hidden";
+    const newValue = !state.enableInlineButtons;
+    state.setInlineButtonsEnabled(newValue);
+    const status = newValue ? "shown" : "hidden";
     vscode.window.setStatusBarMessage(`CSS Controls: inline buttons ${status}`, 2000);
   };
 
@@ -265,7 +78,8 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   const jumpToNumber = (direction: "next" | "previous") => {
-    if (!activeEditor || !isEnabled) {
+    const activeEditor = state.activeEditor;
+    if (!activeEditor || !state.isEnabled) {
       return;
     }
 
@@ -329,7 +143,7 @@ export function activate(context: vscode.ExtensionContext): void {
     activeEditor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     // Update decoration
-    updateActiveDecoration();
+    state.updateContextAndDecorations();
   };
 
   context.subscriptions.push(
@@ -366,13 +180,14 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   const cyclePropertyValue = async (direction: "forward" | "backward"): Promise<void> => {
-    if (!activeEditor || !isEnabled) {
+    const activeEditor = state.activeEditor;
+    if (!activeEditor || !state.isEnabled) {
       return;
     }
 
     const document = activeEditor.document;
     const languageId = document.languageId;
-    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+    const isCssLike = isCssLikeLanguage(languageId);
 
     if (!isCssLike) {
       return;
@@ -450,7 +265,7 @@ export function activate(context: vscode.ExtensionContext): void {
     activeEditor.revealRange(newRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     // Update decoration
-    updateActiveDecoration();
+    state.updateContextAndDecorations();
   };
 
   context.subscriptions.push(
@@ -466,7 +281,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   class CssControlsCodeLensProvider implements vscode.CodeLensProvider {
     // Recompute CodeLens when the active line/editor changes
-    readonly onDidChangeCodeLenses = onDidChangeCodeLensesEmitter.event;
+    readonly onDidChangeCodeLenses = state.onDidChangeCodeLenses;
 
     provideCodeLenses(
       document: vscode.TextDocument,
@@ -474,20 +289,26 @@ export function activate(context: vscode.ExtensionContext): void {
     ): vscode.ProviderResult<vscode.CodeLens[]> {
       const lenses: vscode.CodeLens[] = [];
 
+      const activeEditor = state.activeEditor;
+      const activeLine = state.activeLine;
+
       // Only show CodeLens if this is the active editor and conditions are met
       if (!activeEditor || document.uri.toString() !== activeEditor.document.uri.toString()) {
         return lenses;
       }
 
-      if (!isEnabled) {
+      if (!state.isEnabled) {
         return lenses;
       }
 
-      if (!enableInlineButtons) {
+      if (!state.enableInlineButtons) {
         return lenses;
       }
 
-      if (!checkIfCodeLensShouldShow() || typeof activeLine !== "number") {
+      if (
+        (!state.hasActiveNumber() && !state.hasActivePropertyValue()) ||
+        typeof activeLine !== "number"
+      ) {
         return lenses;
       }
 
@@ -501,7 +322,7 @@ export function activate(context: vscode.ExtensionContext): void {
         cursorPos.character
       );
       const hasProperty = propertyInfo !== null;
-      const hasNumber = checkIfNumberShouldShow();
+      const hasNumber = state.hasActiveNumber();
 
       // Always show help button
       lenses.push(
