@@ -8,6 +8,21 @@ const CSS_NUMBER_REGEX = /-?\d*\.?\d+(px|rem|em|vh|vw|%|ch|fr)?/g;
 // Captures: [1] prefix, [2] number, [3] optional suffix (like 'xl')
 const TAILWIND_NUMBER_REGEX = /\b([a-z]+(?:-[a-z]+)*)-(\d+\.?\d*)([a-z]*)/g;
 
+// Map of CSS properties to their valid values (ordered logically)
+const PROPERTY_VALUES: Record<string, string[]> = {
+  "justify-content": [
+    "flex-start",
+    "flex-end",
+    "center",
+    "space-between",
+    "space-around",
+    "space-evenly",
+    "stretch",
+  ],
+  "align-items": ["flex-start", "flex-end", "center", "baseline", "stretch"],
+  "align-self": ["auto", "flex-start", "flex-end", "center", "baseline", "stretch"],
+};
+
 type Step = "tenth" | "one" | "ten";
 let currentStep: Step = "one";
 
@@ -28,7 +43,8 @@ export function activate(context: vscode.ExtensionContext): void {
   let activeLine: number | undefined = activeEditor?.selection.active.line;
   const onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
 
-  const CONTEXT_KEY = "css-controls.hasActiveNumber";
+  const CONTEXT_KEY_NUMBER = "css-controls.hasActiveNumber";
+  const CONTEXT_KEY_PROPERTY = "css-controls.hasActivePropertyValue";
   const config = vscode.workspace.getConfiguration("css-controls");
   let isEnabled = config.get<boolean>("enabled", true);
   let enableInlineButtons = config.get<boolean>("enableInlineButtons", true);
@@ -44,19 +60,22 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const updateContext = () => {
     if (!isEnabled) {
-      vscode.commands.executeCommand("setContext", CONTEXT_KEY, false);
+      vscode.commands.executeCommand("setContext", CONTEXT_KEY_NUMBER, false);
+      vscode.commands.executeCommand("setContext", CONTEXT_KEY_PROPERTY, false);
       if (activeEditor) {
         activeEditor.setDecorations(activeNumberDecorationType, []);
       }
       return;
     }
 
-    const hasActiveNumber = checkIfCodeLensShouldShow();
-    vscode.commands.executeCommand("setContext", CONTEXT_KEY, hasActiveNumber);
-    updateActiveNumberDecoration();
+    const hasActiveNumber = checkIfNumberShouldShow();
+    const hasActiveProperty = checkIfPropertyValueShouldShow();
+    vscode.commands.executeCommand("setContext", CONTEXT_KEY_NUMBER, hasActiveNumber);
+    vscode.commands.executeCommand("setContext", CONTEXT_KEY_PROPERTY, hasActiveProperty);
+    updateActiveDecoration();
   };
 
-  const updateActiveNumberDecoration = () => {
+  const updateActiveDecoration = () => {
     if (!activeEditor) {
       return;
     }
@@ -85,17 +104,24 @@ export function activate(context: vscode.ExtensionContext): void {
       return;
     }
 
-    // Always use the current cursor position, not activeLine which might be stale
-    const targetRange = findClosestNumberRangeOnLine(document, cursorLine, cursorPos.character);
+    // Check for property value first (takes precedence), then number
+    const propertyRange = findClosestPropertyValueRangeOnLine(
+      document,
+      cursorLine,
+      cursorPos.character
+    );
+    const numberRange = findClosestNumberRangeOnLine(document, cursorLine, cursorPos.character);
 
-    if (targetRange) {
-      activeEditor.setDecorations(activeNumberDecorationType, [targetRange]);
+    if (propertyRange) {
+      activeEditor.setDecorations(activeNumberDecorationType, [propertyRange.range]);
+    } else if (numberRange) {
+      activeEditor.setDecorations(activeNumberDecorationType, [numberRange]);
     } else {
       activeEditor.setDecorations(activeNumberDecorationType, []);
     }
   };
 
-  const checkIfCodeLensShouldShow = (): boolean => {
+  const checkIfNumberShouldShow = (): boolean => {
     if (!isEnabled) {
       return false;
     }
@@ -122,21 +148,47 @@ export function activate(context: vscode.ExtensionContext): void {
       return false;
     }
 
-    const text = document.lineAt(activeLine).text;
+    const cursorPos = activeEditor.selection.active;
+    const numberRange = findClosestNumberRangeOnLine(document, activeLine, cursorPos.character);
+    return numberRange !== null;
+  };
 
-    // For CSS files, check for CSS numbers
-    if (isCssLike) {
-      CSS_NUMBER_REGEX.lastIndex = 0;
-      return CSS_NUMBER_REGEX.test(text);
+  const checkIfPropertyValueShouldShow = (): boolean => {
+    if (!isEnabled) {
+      return false;
     }
 
-    // For HTML/JSX files, check for Tailwind classes with numbers
-    if (isHtmlOrJsx) {
-      TAILWIND_NUMBER_REGEX.lastIndex = 0;
-      return TAILWIND_NUMBER_REGEX.test(text);
+    if (!activeEditor) {
+      return false;
     }
 
-    return false;
+    const document = activeEditor.document;
+    const languageId = document.languageId;
+    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+
+    if (!isCssLike) {
+      return false;
+    }
+
+    if (typeof activeLine !== "number") {
+      return false;
+    }
+
+    if (activeLine < 0 || activeLine >= document.lineCount) {
+      return false;
+    }
+
+    const cursorPos = activeEditor.selection.active;
+    const propertyRange = findClosestPropertyValueRangeOnLine(
+      document,
+      activeLine,
+      cursorPos.character
+    );
+    return propertyRange !== null;
+  };
+
+  const checkIfCodeLensShouldShow = (): boolean => {
+    return checkIfNumberShouldShow() || checkIfPropertyValueShouldShow();
   };
 
   context.subscriptions.push(
@@ -193,7 +245,8 @@ export function activate(context: vscode.ExtensionContext): void {
     isEnabled = newValue;
 
     if (!isEnabled) {
-      vscode.commands.executeCommand("setContext", CONTEXT_KEY, false);
+      vscode.commands.executeCommand("setContext", CONTEXT_KEY_NUMBER, false);
+      vscode.commands.executeCommand("setContext", CONTEXT_KEY_PROPERTY, false);
       if (activeEditor) {
         activeEditor.setDecorations(activeNumberDecorationType, []);
       }
@@ -313,7 +366,7 @@ export function activate(context: vscode.ExtensionContext): void {
     activeEditor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     // Update decoration
-    updateActiveNumberDecoration();
+    updateActiveDecoration();
   };
 
   context.subscriptions.push(
@@ -349,6 +402,103 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  const cyclePropertyValue = async (direction: "forward" | "backward"): Promise<void> => {
+    if (!activeEditor || !isEnabled) {
+      return;
+    }
+
+    const document = activeEditor.document;
+    const languageId = document.languageId;
+    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+
+    if (!isCssLike) {
+      return;
+    }
+
+    const cursorPos = activeEditor.selection.active;
+    const targetLine = cursorPos.line;
+    const referenceColumn = cursorPos.character;
+
+    const propertyInfo = findClosestPropertyValueRangeOnLine(document, targetLine, referenceColumn);
+
+    if (!propertyInfo) {
+      return;
+    }
+
+    const { property, value, range } = propertyInfo;
+    const validValues = PROPERTY_VALUES[property];
+
+    if (!validValues || validValues.length === 0) {
+      return;
+    }
+
+    // Find current value index
+    const currentIndex = validValues.findIndex((v) => v.toLowerCase() === value.toLowerCase());
+
+    if (currentIndex === -1) {
+      return;
+    }
+
+    // Calculate next/previous index (wrapping)
+    let newIndex: number;
+    if (direction === "forward") {
+      newIndex = (currentIndex + 1) % validValues.length;
+    } else {
+      newIndex = (currentIndex - 1 + validValues.length) % validValues.length;
+    }
+
+    const newValue = validValues[newIndex];
+
+    // Replace the value in the document
+    // We need to preserve any modifiers like !important
+    const lineText = document.lineAt(targetLine).text;
+    const currentValueText = document.getText(range);
+    const valueAfterCurrent = lineText.substring(range.end.character);
+
+    // Check if there's !important or other modifiers after the value
+    const importantMatch = valueAfterCurrent.match(/^\s*!\s*important/i);
+    const hasImportant = importantMatch !== null;
+
+    // Replace the value, preserving !important if present
+    const replacement = hasImportant ? `${newValue} !important` : newValue;
+
+    await activeEditor.edit((editBuilder) => {
+      // Replace the entire value range, including any trailing whitespace before !important
+      if (hasImportant && importantMatch && importantMatch.index !== undefined) {
+        const fullRange = new vscode.Range(
+          range.start,
+          new vscode.Position(
+            targetLine,
+            range.end.character + importantMatch.index + importantMatch[0].length
+          )
+        );
+        editBuilder.replace(fullRange, replacement);
+      } else {
+        editBuilder.replace(range, newValue);
+      }
+    });
+
+    // Update cursor position and decoration
+    const newRange = new vscode.Range(
+      range.start,
+      new vscode.Position(range.start.line, range.start.character + newValue.length)
+    );
+    activeEditor.selection = new vscode.Selection(newRange.start, newRange.start);
+    activeEditor.revealRange(newRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+
+    // Update decoration
+    updateActiveDecoration();
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("css-controls.cyclePropertyValueForward", async () => {
+      await cyclePropertyValue("forward");
+    }),
+    vscode.commands.registerCommand("css-controls.cyclePropertyValueBackward", async () => {
+      await cyclePropertyValue("backward");
+    })
+  );
+
   class CssNumberCodeLensProvider implements vscode.CodeLensProvider {
     // Recompute CodeLens when the active line/editor changes
     readonly onDidChangeCodeLenses = onDidChangeCodeLensesEmitter.event;
@@ -378,52 +528,82 @@ export function activate(context: vscode.ExtensionContext): void {
 
       const range = new vscode.Range(activeLine, 0, activeLine, 0);
 
-      // Single pair of increment/decrement lenses whose behavior depends on the current step.
-      const stepConfig =
-        currentStep === "tenth"
-          ? {
-              label: "0.1",
-              incCommand: "css-controls.incrementNumberByTenth",
-              decCommand: "css-controls.decrementNumberByTenth",
-            }
-          : currentStep === "one"
-          ? {
-              label: "1",
-              incCommand: "css-controls.incrementNumber",
-              decCommand: "css-controls.decrementNumber",
-            }
-          : {
-              label: "10",
-              incCommand: "css-controls.incrementNumberByTen",
-              decCommand: "css-controls.decrementNumberByTen",
-            };
+      // Check if we're on a property value or a number
+      const cursorPos = activeEditor.selection.active;
+      const propertyInfo = findClosestPropertyValueRangeOnLine(
+        document,
+        activeLine,
+        cursorPos.character
+      );
+      const hasProperty = propertyInfo !== null;
+      const hasNumber = checkIfNumberShouldShow();
 
+      // Always show help button
       lenses.push(
         new vscode.CodeLens(range, {
           title: "?",
           command: "css-controls.openDocs",
           tooltip: "Open CSS Controls docs and settings (css-controls)",
-        }),
-        // Step indicator / cycle control
-        new vscode.CodeLens(range, {
-          title: `x${stepConfig.label}`,
-          command: "css-controls.cycleStep",
-          tooltip: "Cycle CSS Controls step (0.1, 1, 10) (css-controls)",
-        }),
-        // Decrement / increment for the current step
-        new vscode.CodeLens(range, {
-          title: `▼`,
-          command: stepConfig.decCommand,
-          arguments: [activeLine],
-          tooltip: `Decrement number by ${stepConfig.label} (css-controls)`,
-        }),
-        new vscode.CodeLens(range, {
-          title: `▲`,
-          command: stepConfig.incCommand,
-          arguments: [activeLine],
-          tooltip: `Increment number by ${stepConfig.label} (css-controls)`,
         })
       );
+
+      if (hasProperty) {
+        // Show property cycling buttons
+        lenses.push(
+          new vscode.CodeLens(range, {
+            title: `◀`,
+            command: "css-controls.cyclePropertyValueBackward",
+            tooltip: "Cycle property value backward (css-controls)",
+          }),
+          new vscode.CodeLens(range, {
+            title: `▶`,
+            command: "css-controls.cyclePropertyValueForward",
+            tooltip: "Cycle property value forward (css-controls)",
+          })
+        );
+      } else if (hasNumber) {
+        // Show number controls
+        const stepConfig =
+          currentStep === "tenth"
+            ? {
+                label: "0.1",
+                incCommand: "css-controls.incrementNumberByTenth",
+                decCommand: "css-controls.decrementNumberByTenth",
+              }
+            : currentStep === "one"
+            ? {
+                label: "1",
+                incCommand: "css-controls.incrementNumber",
+                decCommand: "css-controls.decrementNumber",
+              }
+            : {
+                label: "10",
+                incCommand: "css-controls.incrementNumberByTen",
+                decCommand: "css-controls.decrementNumberByTen",
+              };
+
+        lenses.push(
+          // Step indicator / cycle control
+          new vscode.CodeLens(range, {
+            title: `x${stepConfig.label}`,
+            command: "css-controls.cycleStep",
+            tooltip: "Cycle CSS Controls step (0.1, 1, 10) (css-controls)",
+          }),
+          // Decrement / increment for the current step
+          new vscode.CodeLens(range, {
+            title: `▼`,
+            command: stepConfig.decCommand,
+            arguments: [activeLine],
+            tooltip: `Decrement number by ${stepConfig.label} (css-controls)`,
+          }),
+          new vscode.CodeLens(range, {
+            title: `▲`,
+            command: stepConfig.incCommand,
+            arguments: [activeLine],
+            tooltip: `Increment number by ${stepConfig.label} (css-controls)`,
+          })
+        );
+      }
 
       return lenses;
     }
@@ -667,4 +847,151 @@ function findClosestNumberRangeOnLine(
   }
 
   return best;
+}
+
+interface PropertyValueInfo {
+  range: vscode.Range;
+  property: string;
+  value: string;
+}
+
+function findClosestPropertyValueRangeOnLine(
+  document: vscode.TextDocument,
+  lineNumber: number,
+  referenceColumn?: number
+): PropertyValueInfo | null {
+  if (lineNumber < 0 || lineNumber >= document.lineCount) {
+    return null;
+  }
+
+  const languageId = document.languageId;
+  const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+
+  // Only work with CSS-like files for now
+  if (!isCssLike) {
+    return null;
+  }
+
+  const lineText = document.lineAt(lineNumber).text;
+  const refCol = referenceColumn ?? 0;
+
+  // Regex to match CSS property-value pairs: property-name: value;
+  // Handles: property: value; or property: value (without semicolon)
+  // Captures: [1] property name, [2] full value string
+  const propertyValueRegex = /([a-z-]+)\s*:\s*([^;]+?)(?:\s*;|\s*$)/gi;
+
+  const matches: Array<{
+    property: string;
+    value: string;
+    valueStart: number;
+    valueEnd: number;
+  }> = [];
+
+  propertyValueRegex.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = propertyValueRegex.exec(lineText)) !== null) {
+    const property = match[1].trim().toLowerCase();
+    const fullValue = match[2].trim();
+
+    // Check if this property is in our PROPERTY_VALUES map
+    if (property in PROPERTY_VALUES) {
+      const validValues = PROPERTY_VALUES[property];
+      const fullValueLower = fullValue.toLowerCase();
+
+      // Find which valid value matches
+      for (const validValue of validValues) {
+        const validValueLower = validValue.toLowerCase();
+
+        // Check for exact match or if the value starts with the valid value (for cases like "center !important")
+        if (
+          fullValueLower === validValueLower ||
+          fullValueLower.startsWith(validValueLower + " ") ||
+          fullValueLower.startsWith(validValueLower + "!")
+        ) {
+          // Calculate the value range
+          const colonIndex = match.index + match[1].length;
+          const afterColon = lineText.substring(colonIndex);
+          const colonMatch = afterColon.match(/:\s*/);
+
+          if (colonMatch && colonMatch.index !== undefined) {
+            const valueStart = colonIndex + colonMatch.index + colonMatch[0].length;
+            // Find the position of the matched value in the value string
+            const valueText = lineText.substring(valueStart);
+            const valueIndex = valueText.toLowerCase().indexOf(validValueLower);
+
+            if (valueIndex >= 0) {
+              // Find the end of the value word (might have !important or other modifiers)
+              const valueWordEnd = valueIndex + validValue.length;
+              // Look for word boundary (space, semicolon, or end)
+              let actualEnd = valueStart + valueWordEnd;
+              const remaining = valueText.substring(valueWordEnd);
+              const boundaryMatch = remaining.match(/^(\s|;|!)/);
+              if (boundaryMatch) {
+                // Include the boundary if it's part of the value (like !important)
+                if (boundaryMatch[0] === "!") {
+                  // Check if it's !important
+                  const importantMatch = remaining.match(/^!\s*important/i);
+                  if (importantMatch && importantMatch.index !== undefined) {
+                    actualEnd =
+                      valueStart + valueIndex + importantMatch.index + importantMatch[0].length;
+                  } else {
+                    actualEnd = valueStart + valueIndex + validValue.length;
+                  }
+                } else {
+                  actualEnd = valueStart + valueIndex + validValue.length;
+                }
+              } else {
+                actualEnd = valueStart + valueIndex + validValue.length;
+              }
+
+              matches.push({
+                property,
+                value: validValue,
+                valueStart: valueStart + valueIndex,
+                valueEnd: actualEnd,
+              });
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  // Find the match that the cursor is on or closest to
+  let bestMatch: (typeof matches)[0] | null = null;
+  let bestDist = Infinity;
+
+  for (const m of matches) {
+    // Check if cursor is inside this value range
+    if (refCol >= m.valueStart && refCol <= m.valueEnd) {
+      bestMatch = m;
+      break;
+    }
+
+    // Otherwise, calculate distance to center
+    const center = (m.valueStart + m.valueEnd) / 2;
+    const dist = Math.abs(center - refCol);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestMatch = m;
+    }
+  }
+
+  if (!bestMatch) {
+    return null;
+  }
+
+  return {
+    range: new vscode.Range(
+      new vscode.Position(lineNumber, bestMatch.valueStart),
+      new vscode.Position(lineNumber, bestMatch.valueEnd)
+    ),
+    property: bestMatch.property,
+    value: bestMatch.value,
+  };
 }

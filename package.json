@@ -117,6 +117,14 @@
       {
         "command": "css-controls.jumpToPreviousNumber",
         "title": "CSS Controls: Jump to Previous Number"
+      },
+      {
+        "command": "css-controls.cyclePropertyValueForward",
+        "title": "CSS Controls: Cycle Property Value Forward"
+      },
+      {
+        "command": "css-controls.cyclePropertyValueBackward",
+        "title": "CSS Controls: Cycle Property Value Backward"
       }
     ],
     "codeLens": [
@@ -175,6 +183,16 @@
         "key": "ctrl+shift+left",
         "command": "css-controls.jumpToPreviousNumber",
         "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
+      },
+      {
+        "key": "ctrl+left",
+        "command": "css-controls.cyclePropertyValueBackward",
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less)/ && css-controls.hasActivePropertyValue"
+      },
+      {
+        "key": "ctrl+right",
+        "command": "css-controls.cyclePropertyValueForward",
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less)/ && css-controls.hasActivePropertyValue"
       }
     ]
   },
