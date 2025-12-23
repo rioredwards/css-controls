@@ -26,6 +26,14 @@ export interface CssControlsState {
   notifyCodeLensChange(): void;
 }
 
+/**
+ * Creates and returns a state manager that tracks editor selection, configuration, and decorations for CSS-related controls.
+ *
+ * The returned object exposes the active editor/line, enabled flags, a decoration type, an event for code-lens changes, and methods to update state from editor/selection/document/config changes, to refresh context and decorations, to query whether a number or property value is active on the current line, and to toggle feature flags.
+ *
+ * @param configSection - The workspace configuration section to read and update (defaults to "css-controls")
+ * @returns The CssControlsState instance managing context keys, decorations, configuration, and code-lens change notifications
+ */
 export function createCssControlsState(configSection = "css-controls"): CssControlsState {
   let activeEditor = vscode.window.activeTextEditor;
   let activeLine: number | undefined = activeEditor?.selection.active.line;

@@ -16,7 +16,11 @@ import { createCssControlsState } from "./state";
 type Step = "tenth" | "one" | "ten";
 let currentStep: Step = "one";
 
-// --- Extension entrypoint ---------------------------------------------------
+/**
+ * Activates the extension by initializing state, wiring editor/document/config listeners, registering commands, and registering the CodeLens provider used for CSS/Tailwind number controls.
+ *
+ * @param context - VS Code extension context used to register subscriptions and disposables
+ */
 
 export function activate(context: vscode.ExtensionContext): void {
   console.log("CSS Controls extension activated");
@@ -240,6 +244,19 @@ async function runValueAdjustment(
   // await vscode.commands.executeCommand("workbench.action.files.saveWithoutFormatting");
 }
 
+/**
+ * Apply an increment or decrement to the numeric token at `targetRange` on `targetLine`, updating the active editor.
+ *
+ * The function determines the step from the module-level `currentStep`, computes a new formatted numeric value,
+ * and attempts to map that value into a matching Tailwind-style class on the same line using `TAILWIND_NUMBER_REGEX`.
+ * If a matching class is found, the entire class token is replaced preserving its prefix and suffix; otherwise only
+ * the numeric range is replaced. If there is no active editor or the target text is not a number, no changes are made.
+ *
+ * @param document - The document containing the target line.
+ * @param targetLine - Zero-based line index that contains the target number.
+ * @param targetRange - Range of the numeric token to adjust.
+ * @param emmetCommand - Emmet command string whose name indicates increment vs. decrement.
+ */
 async function applyTailwindNumberAdjustment(
   document: vscode.TextDocument,
   targetLine: number,
