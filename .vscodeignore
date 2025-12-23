@@ -10,3 +10,11 @@ vsc-extension-quickstart.md
 **/*.ts
 **/.vscode-test.*
 .env
+# AI / tooling metadata
+.cursor/**
+
+# Test bundles (you don't need these in the published extension)
+out/test/**
+
+# Local marker file
+.dummy
