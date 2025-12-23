@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { findClosestPropertyValueRangeOnLine } from "./detection";
 import { CssControlsState } from "./state";
 
 export function createCodeLensProvider(
@@ -41,15 +40,8 @@ export function createCodeLensProvider(
 
       const range = new vscode.Range(activeLine, 0, activeLine, 0);
 
-      // Check if we're on a property value or a number
-      const cursorPos = activeEditor.selection.active;
-      const propertyInfo = findClosestPropertyValueRangeOnLine(
-        document,
-        activeLine,
-        cursorPos.character
-      );
-      const hasProperty = propertyInfo !== null;
       const hasNumber = state.hasActiveNumber();
+      const hasProperty = state.hasActivePropertyValue();
 
       // Always show help button
       lenses.push(
@@ -60,22 +52,8 @@ export function createCodeLensProvider(
         })
       );
 
-      if (hasProperty) {
-        // Show property cycling buttons
-        lenses.push(
-          new vscode.CodeLens(range, {
-            title: `◀`,
-            command: "css-controls.cyclePropertyValueBackward",
-            tooltip: "Cycle property value backward (css-controls)",
-          }),
-          new vscode.CodeLens(range, {
-            title: `▶`,
-            command: "css-controls.cyclePropertyValueForward",
-            tooltip: "Cycle property value forward (css-controls)",
-          })
-        );
-      } else if (hasNumber) {
-        // Show number controls
+      // For numbers, show step indicator + controls; for properties, just show ▲▼
+      if (hasNumber && !hasProperty) {
         const stepConfig = getCurrentStepLabel();
 
         lenses.push(
@@ -90,13 +68,31 @@ export function createCodeLensProvider(
             title: `▼`,
             command: stepConfig.decCommand,
             arguments: [activeLine],
-            tooltip: `Decrement number by ${stepConfig.label} (css-controls)`,
+            tooltip: `Decrement value by ${stepConfig.label} (css-controls)`,
           }),
           new vscode.CodeLens(range, {
             title: `▲`,
             command: stepConfig.incCommand,
             arguments: [activeLine],
-            tooltip: `Increment number by ${stepConfig.label} (css-controls)`,
+            tooltip: `Increment value by ${stepConfig.label} (css-controls)`,
+          })
+        );
+      } else {
+        // Property (or ambiguous) case: just show ▲▼ using the current step commands
+        const stepConfig = getCurrentStepLabel();
+
+        lenses.push(
+          new vscode.CodeLens(range, {
+            title: `▼`,
+            command: stepConfig.decCommand,
+            arguments: [activeLine],
+            tooltip: "Decrement value (css-controls)",
+          }),
+          new vscode.CodeLens(range, {
+            title: `▲`,
+            command: stepConfig.incCommand,
+            arguments: [activeLine],
+            tooltip: "Increment value (css-controls)",
           })
         );
       }

@@ -1,9 +1,7 @@
 import * as vscode from "vscode";
-import { PROPERTY_VALUES, isCssLikeLanguage, isHtmlOrJsxLanguage } from "./constants";
-import { findClosestPropertyValueRangeOnLine, getNumberRangesOnLine } from "./detection";
+import { isCssLikeLanguage, isHtmlOrJsxLanguage } from "./constants";
+import { getNumberRangesOnLine } from "./detection";
 import { CssControlsState } from "./state";
-
-type Step = "tenth" | "one" | "ten";
 
 export function createToggleEnabledCommand(state: CssControlsState): () => void {
   return () => {
@@ -91,103 +89,6 @@ export function createJumpToNumberCommand(
     const targetRange = ranges[targetIndex];
     activeEditor.selection = new vscode.Selection(targetRange.start, targetRange.start);
     activeEditor.revealRange(targetRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-
-    // Update decoration/context via state
-    state.updateContextAndDecorations();
-  };
-}
-
-export function createCyclePropertyValueCommand(
-  state: CssControlsState,
-  direction: "forward" | "backward",
-  currentStep: () => Step
-): () => Promise<void> {
-  return async () => {
-    const activeEditor = state.activeEditor;
-    if (!activeEditor || !state.isEnabled) {
-      return;
-    }
-
-    const document = activeEditor.document;
-    const languageId = document.languageId;
-    const isCssLike = isCssLikeLanguage(languageId);
-
-    if (!isCssLike) {
-      return;
-    }
-
-    const cursorPos = activeEditor.selection.active;
-    const targetLine = cursorPos.line;
-    const referenceColumn = cursorPos.character;
-
-    // For now we reuse the existing detection from state/detection:
-    // state.hasActivePropertyValue() is based on findClosestPropertyValueRangeOnLine internally,
-    // but we still need the actual range/value here, so we keep this logic local.
-    const propertyInfo = findClosestPropertyValueRangeOnLine(document, targetLine, referenceColumn);
-
-    if (!propertyInfo) {
-      return;
-    }
-
-    const { property, value, range } = propertyInfo;
-    const validValues = PROPERTY_VALUES[property];
-
-    if (!validValues || validValues.length === 0) {
-      return;
-    }
-
-    // Find current value index
-    const currentIndex = validValues.findIndex((v) => v.toLowerCase() === value.toLowerCase());
-
-    if (currentIndex === -1) {
-      return;
-    }
-
-    // Calculate next/previous index (wrapping)
-    let newIndex: number;
-    if (direction === "forward") {
-      newIndex = (currentIndex + 1) % validValues.length;
-    } else {
-      newIndex = (currentIndex - 1 + validValues.length) % validValues.length;
-    }
-
-    const newValue = validValues[newIndex];
-
-    // Replace the value in the document
-    // We need to preserve any modifiers like !important
-    const lineText = document.lineAt(targetLine).text;
-    const valueAfterCurrent = lineText.substring(range.end.character);
-
-    // Check if there's !important or other modifiers after the value
-    const importantMatch = valueAfterCurrent.match(/^\s*!\s*important/i);
-    const hasImportant = importantMatch !== null;
-
-    // Replace the value, preserving !important if present
-    const replacement = hasImportant ? `${newValue} !important` : newValue;
-
-    await activeEditor.edit((editBuilder) => {
-      // Replace the entire value range, including any trailing whitespace before !important
-      if (hasImportant && importantMatch && importantMatch.index !== undefined) {
-        const fullRange = new vscode.Range(
-          range.start,
-          new vscode.Position(
-            targetLine,
-            range.end.character + importantMatch.index + importantMatch[0].length
-          )
-        );
-        editBuilder.replace(fullRange, replacement);
-      } else {
-        editBuilder.replace(range, newValue);
-      }
-    });
-
-    // Update cursor position and decoration
-    const newRange = new vscode.Range(
-      range.start,
-      new vscode.Position(range.start.line, range.start.character + newValue.length)
-    );
-    activeEditor.selection = new vscode.Selection(newRange.start, newRange.start);
-    activeEditor.revealRange(newRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 
     // Update decoration/context via state
     state.updateContextAndDecorations();

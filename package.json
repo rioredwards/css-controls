@@ -2,7 +2,7 @@
   "name": "css-controls",
   "displayName": "CSS Controls",
   "description": "Controls for quick CSS/Tailwind tuning.",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "publisher": "RioEdwards",
   "author": "Rio Edwards <rioredwards@gmail.com>",
   "homepage": "https://github.com/rioredwards/css-controls",
@@ -72,7 +72,7 @@
         "css-controls.enableInlineButtons": {
           "type": "boolean",
           "default": true,
-          "description": "Show inline buttons above CSS/Tailwind numbers (disable this if you just want the keyboard shortcuts)",
+          "description": "Show inline buttons above supported CSS/Tailwind values (disable this if you just want the keyboard shortcuts)",
           "scope": "window"
         }
       }
@@ -103,12 +103,12 @@
         "title": "CSS Controls: Decrease Step"
       },
       {
-        "command": "css-controls.incrementNumber",
-        "title": "CSS Controls: Increment Number"
+        "command": "css-controls.incrementValue",
+        "title": "CSS Controls: Increment Value"
       },
       {
-        "command": "css-controls.decrementNumber",
-        "title": "CSS Controls: Decrement Number"
+        "command": "css-controls.decrementValue",
+        "title": "CSS Controls: Decrement Value"
       },
       {
         "command": "css-controls.jumpToNextNumber",
@@ -117,14 +117,6 @@
       {
         "command": "css-controls.jumpToPreviousNumber",
         "title": "CSS Controls: Jump to Previous Number"
-      },
-      {
-        "command": "css-controls.cyclePropertyValueForward",
-        "title": "CSS Controls: Cycle Property Value Forward"
-      },
-      {
-        "command": "css-controls.cyclePropertyValueBackward",
-        "title": "CSS Controls: Cycle Property Value Backward"
       }
     ],
     "codeLens": [
@@ -156,13 +148,13 @@
     "keybindings": [
       {
         "key": "ctrl+up",
-        "command": "css-controls.incrementNumber",
-        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && !editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
+        "command": "css-controls.incrementValue",
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && !editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && (css-controls.hasActiveNumber || css-controls.hasActivePropertyValue)"
       },
       {
         "key": "ctrl+down",
-        "command": "css-controls.decrementNumber",
-        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
+        "command": "css-controls.decrementValue",
+        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && (css-controls.hasActiveNumber || css-controls.hasActivePropertyValue)"
       },
       {
         "key": "ctrl+shift+up",
@@ -183,16 +175,6 @@
         "key": "ctrl+shift+left",
         "command": "css-controls.jumpToPreviousNumber",
         "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less|html|javascriptreact|typescriptreact)/ && css-controls.hasActiveNumber"
-      },
-      {
-        "key": "ctrl+left",
-        "command": "css-controls.cyclePropertyValueBackward",
-        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less)/ && css-controls.hasActivePropertyValue"
-      },
-      {
-        "key": "ctrl+right",
-        "command": "css-controls.cyclePropertyValueForward",
-        "when": "!editorReadonly && editorFocus && editorLangId =~ /(css|scss|less)/ && css-controls.hasActivePropertyValue"
       }
     ]
   },

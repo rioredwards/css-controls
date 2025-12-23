@@ -2,7 +2,6 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 
 import {
-  createCyclePropertyValueCommand,
   createJumpToNumberCommand,
   createToggleEnabledCommand,
   createToggleInlineButtonsCommand,
@@ -91,26 +90,17 @@ suite("Commands Test Suite", () => {
     jumpNext();
   });
 
-  test("cyclePropertyValueCommand cycles known property values", async () => {
+  test("increment command cycles flexbox property value when nearest", async () => {
     const doc = await vscode.workspace.openTextDocument({
       language: "css",
       content: ".row { justify-content: flex-start; }",
     });
     const editor = await vscode.window.showTextDocument(doc);
 
-    const state = createMockState();
-    state.updateFromActiveEditor(editor);
-
-    const command = createCyclePropertyValueCommand(
-      state,
-      "forward",
-      () => "one" // step does not affect property cycling
-    );
-
     // Place cursor on the value
     editor.selection = new vscode.Selection(0, 30, 0, 30);
 
-    await command();
+    await vscode.commands.executeCommand("css-controls.incrementValue");
 
     const updatedText = doc.getText();
     assert.ok(

@@ -57,8 +57,8 @@ suite("CodeLens Provider Test Suite", () => {
   function createStepLabelStub() {
     return {
       label: "1",
-      incCommand: "css-controls.incrementNumber",
-      decCommand: "css-controls.decrementNumber",
+      incCommand: "css-controls.incrementValue",
+      decCommand: "css-controls.decrementValue",
     };
   }
 
@@ -76,7 +76,7 @@ suite("CodeLens Provider Test Suite", () => {
     assert.strictEqual(lenses.length, 0);
   });
 
-  test("provides property lenses when hasActivePropertyValue is true", async () => {
+  test("provides property lenses without step when hasActivePropertyValue is true", async () => {
     const state = createMockState({ hasNumber: false, hasProperty: true });
     const provider = createCodeLensProvider(state, createStepLabelStub);
 
@@ -92,8 +92,9 @@ suite("CodeLens Provider Test Suite", () => {
     const titles = lenses.map((lens: vscode.CodeLens) => lens.command?.title);
 
     assert.ok(titles.includes("?"), "Expected help lens");
-    assert.ok(titles.includes("◀"), "Expected backward property lens");
-    assert.ok(titles.includes("▶"), "Expected forward property lens");
+    assert.ok(titles.includes("▼"), "Expected decrement lens");
+    assert.ok(titles.includes("▲"), "Expected increment lens");
+    assert.ok(!titles.includes("x1"), "Did not expect step lens for property");
   });
 
   test("provides number lenses when hasActiveNumber is true", async () => {
