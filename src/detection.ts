@@ -7,15 +7,10 @@ import {
   isHtmlOrJsxLanguage,
 } from "./constants";
 
-export function findClosestNumberRangeOnLine(
+export function getNumberRangesOnLine(
   document: vscode.TextDocument,
-  lineNumber: number,
-  referenceColumn?: number
-): vscode.Range | null {
-  if (lineNumber < 0 || lineNumber >= document.lineCount) {
-    return null;
-  }
-
+  lineNumber: number
+): vscode.Range[] {
   const lineText = document.lineAt(lineNumber).text;
   const languageId = document.languageId;
   const isCssLike = isCssLikeLanguage(languageId);
@@ -56,6 +51,20 @@ export function findClosestNumberRangeOnLine(
       );
     }
   }
+
+  return ranges;
+}
+
+export function findClosestNumberRangeOnLine(
+  document: vscode.TextDocument,
+  lineNumber: number,
+  referenceColumn?: number
+): vscode.Range | null {
+  if (lineNumber < 0 || lineNumber >= document.lineCount) {
+    return null;
+  }
+
+  const ranges = getNumberRangesOnLine(document, lineNumber);
 
   if (ranges.length === 0) {
     return null;

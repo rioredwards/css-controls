@@ -2,14 +2,17 @@ import * as vscode from "vscode";
 import {
   CONTEXT_KEY_NUMBER,
   CONTEXT_KEY_PROPERTY,
-  CSS_NUMBER_REGEX,
   PROPERTY_VALUES,
   SELECTOR,
   TAILWIND_NUMBER_REGEX,
   isCssLikeLanguage,
   isHtmlOrJsxLanguage,
 } from "./constants";
-import { findClosestNumberRangeOnLine, findClosestPropertyValueRangeOnLine } from "./detection";
+import {
+  findClosestNumberRangeOnLine,
+  findClosestPropertyValueRangeOnLine,
+  getNumberRangesOnLine,
+} from "./detection";
 
 type Step = "tenth" | "one" | "ten";
 let currentStep: Step = "one";
@@ -280,34 +283,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const currentCol = cursorPos.character;
 
     // Find all numbers on the current line
-    const ranges: vscode.Range[] = [];
-    const lineText = document.lineAt(currentLine).text;
-
-    if (isCssLike) {
-      CSS_NUMBER_REGEX.lastIndex = 0;
-      let match: RegExpExecArray | null;
-      while ((match = CSS_NUMBER_REGEX.exec(lineText)) !== null) {
-        ranges.push(
-          new vscode.Range(
-            new vscode.Position(currentLine, match.index),
-            new vscode.Position(currentLine, match.index + match[0].length)
-          )
-        );
-      }
-    } else if (isHtmlOrJsx) {
-      TAILWIND_NUMBER_REGEX.lastIndex = 0;
-      let match: RegExpExecArray | null;
-      while ((match = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
-        const numberStart = match.index + match[1].length + 1;
-        const numberEnd = numberStart + match[2].length;
-        ranges.push(
-          new vscode.Range(
-            new vscode.Position(currentLine, numberStart),
-            new vscode.Position(currentLine, numberEnd)
-          )
-        );
-      }
-    }
+    const ranges = getNumberRangesOnLine(document, currentLine);
 
     if (ranges.length === 0) {
       return;
