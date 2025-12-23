@@ -6,7 +6,7 @@ import {
   createToggleEnabledCommand,
   createToggleInlineButtonsCommand,
 } from "./commands";
-import { SELECTOR, TAILWIND_NUMBER_REGEX } from "./constants";
+import { SELECTOR, TAILWIND_NUMBER_REGEX, isHtmlOrJsxLanguage } from "./constants";
 import { findClosestNumberRangeOnLine } from "./detection";
 import { createCssControlsState } from "./state";
 
@@ -205,8 +205,7 @@ async function runNumberAdjustment(
 
   const document = editor.document;
   const languageId = document.languageId;
-  const isHtmlOrJsx =
-    languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+  const isHtmlOrJsx = isHtmlOrJsxLanguage(languageId);
 
   const cursorPos = editor.selection.active;
   const targetLine = typeof lineFromLens === "number" ? lineFromLens : cursorPos.line;
@@ -223,69 +222,7 @@ async function runNumberAdjustment(
 
   // For Tailwind classes, we need custom logic since Emmet doesn't work on class names
   if (isHtmlOrJsx) {
-    const lineText = document.lineAt(targetLine).text;
-    const numberText = document.getText(targetRange);
-    const number = parseFloat(numberText);
-
-    if (isNaN(number)) {
-      return;
-    }
-
-    // Determine the step amount based on currentStep
-    const stepAmount = currentStep === "tenth" ? 0.1 : currentStep === "one" ? 1 : 10;
-
-    // Determine if incrementing or decrementing
-    const isIncrement = emmetCommand.includes("increment");
-
-    // Calculate new number
-    const newNumber = isIncrement ? number + stepAmount : number - stepAmount;
-
-    // For Tailwind, we typically want integers, but handle decimals for step 0.1
-    const newNumberText =
-      stepAmount === 0.1
-        ? newNumber.toFixed(1).replace(/\.0$/, "")
-        : Math.round(newNumber).toString();
-
-    // Find the full class name to replace (e.g., "w-12" -> "w-13" or "rounded-tl-3.9xl" -> "rounded-tl-3.8xl")
-    TAILWIND_NUMBER_REGEX.lastIndex = 0;
-    let classMatch: RegExpExecArray | null;
-    let classRange: vscode.Range | null = null;
-    let prefix = "";
-    let suffix = "";
-
-    while ((classMatch = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
-      // match[1] is prefix, match[2] is number, match[3] is optional suffix (like 'xl')
-      // Number starts after: classMatch.index (start of match) + prefix length + 1 (for the dash)
-      const numberStart = classMatch.index + classMatch[1].length + 1;
-      const numberEnd = numberStart + classMatch[2].length;
-
-      if (numberStart === targetRange.start.character && numberEnd === targetRange.end.character) {
-        // Found the matching class
-        prefix = classMatch[1];
-        suffix = classMatch[3] || "";
-        const classStart = classMatch.index;
-        const classEnd = classMatch.index + classMatch[0].length;
-        classRange = new vscode.Range(
-          new vscode.Position(targetLine, classStart),
-          new vscode.Position(targetLine, classEnd)
-        );
-        break;
-      }
-    }
-
-    if (classRange) {
-      // Reconstruct the class with the new number: prefix-newNumber-suffix
-      const newClass = `${prefix}-${newNumberText}${suffix}`;
-
-      await editor.edit((editBuilder) => {
-        editBuilder.replace(classRange!, newClass);
-      });
-    } else {
-      // Fallback: just replace the number
-      await editor.edit((editBuilder) => {
-        editBuilder.replace(targetRange, newNumberText);
-      });
-    }
+    await applyTailwindNumberAdjustment(document, targetLine, targetRange, emmetCommand);
   } else {
     // For CSS files, use Emmet commands
     await vscode.commands.executeCommand(emmetCommand);
@@ -293,4 +230,68 @@ async function runNumberAdjustment(
 
   // Save the file so that the changes are reflected in the file (don't format to minimize intrusion)
   // await vscode.commands.executeCommand("workbench.action.files.saveWithoutFormatting");
+}
+
+async function applyTailwindNumberAdjustment(
+  document: vscode.TextDocument,
+  targetLine: number,
+  targetRange: vscode.Range,
+  emmetCommand: string
+): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+
+  const lineText = document.lineAt(targetLine).text;
+  const numberText = document.getText(targetRange);
+  const number = parseFloat(numberText);
+
+  if (isNaN(number)) {
+    return;
+  }
+
+  const stepAmount = currentStep === "tenth" ? 0.1 : currentStep === "one" ? 1 : 10;
+  const isIncrement = emmetCommand.includes("increment");
+  const newNumber = isIncrement ? number + stepAmount : number - stepAmount;
+
+  const newNumberText =
+    stepAmount === 0.1
+      ? newNumber.toFixed(1).replace(/\.0$/, "")
+      : Math.round(newNumber).toString();
+
+  TAILWIND_NUMBER_REGEX.lastIndex = 0;
+  let classMatch: RegExpExecArray | null;
+  let classRange: vscode.Range | null = null;
+  let prefix = "";
+  let suffix = "";
+
+  while ((classMatch = TAILWIND_NUMBER_REGEX.exec(lineText)) !== null) {
+    const numberStart = classMatch.index + classMatch[1].length + 1;
+    const numberEnd = numberStart + classMatch[2].length;
+
+    if (numberStart === targetRange.start.character && numberEnd === targetRange.end.character) {
+      prefix = classMatch[1];
+      suffix = classMatch[3] || "";
+      const classStart = classMatch.index;
+      const classEnd = classMatch.index + classMatch[0].length;
+      classRange = new vscode.Range(
+        new vscode.Position(targetLine, classStart),
+        new vscode.Position(targetLine, classEnd)
+      );
+      break;
+    }
+  }
+
+  if (classRange) {
+    const newClass = `${prefix}-${newNumberText}${suffix}`;
+
+    await editor.edit((editBuilder) => {
+      editBuilder.replace(classRange!, newClass);
+    });
+  } else {
+    await editor.edit((editBuilder) => {
+      editBuilder.replace(targetRange, newNumberText);
+    });
+  }
 }

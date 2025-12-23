@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { PROPERTY_VALUES, isCssLikeLanguage } from "./constants";
+import { PROPERTY_VALUES, isCssLikeLanguage, isHtmlOrJsxLanguage } from "./constants";
 import { findClosestPropertyValueRangeOnLine, getNumberRangesOnLine } from "./detection";
 import { CssControlsState } from "./state";
 
@@ -36,8 +36,7 @@ export function createJumpToNumberCommand(
     const document = activeEditor.document;
     const languageId = document.languageId;
     const isCssLike = isCssLikeLanguage(languageId);
-    const isHtmlOrJsx =
-      languageId === "html" || languageId === "javascriptreact" || languageId === "typescriptreact";
+    const isHtmlOrJsx = isHtmlOrJsxLanguage(languageId);
 
     if (!isCssLike && !isHtmlOrJsx) {
       return;

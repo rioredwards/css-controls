@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { CONTEXT_KEY_NUMBER, CONTEXT_KEY_PROPERTY } from "./constants";
+import { CONTEXT_KEY_NUMBER, CONTEXT_KEY_PROPERTY, isCssLikeLanguage } from "./constants";
 import { findClosestNumberRangeOnLine, findClosestPropertyValueRangeOnLine } from "./detection";
 
 export interface CssControlsState {
@@ -115,7 +115,7 @@ export function createCssControlsState(configSection = "css-controls"): CssContr
 
     const document = activeEditor.document;
     const languageId = document.languageId;
-    const isCssLike = languageId === "css" || languageId === "scss" || languageId === "less";
+    const isCssLike = isCssLikeLanguage(languageId);
 
     if (!isCssLike) {
       return false;
